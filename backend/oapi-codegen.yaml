@@ -1,0 +1,6 @@
+package: handler
+output: internal/handler/openapi_gen.go
+generate:
+  chi-server: true
+  models: true
+  embedded-spec: true

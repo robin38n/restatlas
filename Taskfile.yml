@@ -1,0 +1,61 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Start frontend + backend in parallel
+    deps: [dev:frontend, dev:backend]
+
+  dev:frontend:
+    dir: frontend
+    cmd: bun run start
+
+  dev:backend:
+    dir: backend
+    cmd: air
+
+  build:
+    desc: Build everything
+    deps: [build:frontend, build:backend]
+
+  build:frontend:
+    dir: frontend
+    cmd: bun run build
+
+  build:backend:
+    dir: backend
+    cmd: go build -o ../dist/server ./cmd/server
+
+  test:
+    desc: Run all tests
+    deps: [test:frontend, test:backend]
+
+  test:frontend:
+    dir: frontend
+    cmd: bun run test
+
+  test:backend:
+    dir: backend
+    cmd: go test ./...
+
+  lint:
+    deps: [lint:frontend, lint:backend]
+
+  lint:frontend:
+    dir: frontend
+    cmd: biome check .
+
+  lint:backend:
+    dir: backend
+    cmd: golangci-lint run
+
+  generate:api:
+    desc: Generate Go types + TS types from OpenAPI spec
+    deps: [generate:api:go, generate:api:ts]
+
+  generate:api:go:
+    dir: backend
+    cmd: oapi-codegen -config oapi-codegen.yaml ../api/openapi.yaml
+
+  generate:api:ts:
+    dir: frontend
+    cmd: bun run openapi-generate
