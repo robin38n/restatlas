@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist"]
+		"includes": ["**", "!!**/dist", "!!src/app/api/schema.d.ts"]
 	},
 	"formatter": {
 		"enabled": true,

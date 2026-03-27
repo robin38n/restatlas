@@ -7,6 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	"github.com/robin38n/restatlas/backend/internal/handler"
+	"github.com/robin38n/restatlas/backend/internal/store"
 )
 
 func main() {
@@ -21,11 +24,10 @@ func main() {
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 	}))
 
-	// Routes
-	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
+	// Wire up generated routes under /api
+	specStore := store.New()
+	server := handler.NewServer(specStore)
+	handler.HandlerFromMuxWithBaseURL(server, r, "/api")
 
 	log.Println("Server starting on :3000")
 	if err := http.ListenAndServe(":3000", r); err != nil {
