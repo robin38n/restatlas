@@ -5,11 +5,23 @@ import {
 	signal,
 	viewChild,
 } from "@angular/core";
-import { RouterLink } from "@angular/router";
+import { Router, RouterLink } from "@angular/router";
 import { ApiService } from "../../api/api.service";
 import type { components } from "../../api/schema";
 
 type SpecSummary = components["schemas"]["SpecSummary"];
+
+const PLACEHOLDER_JSON = `{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "My API",
+    "version": "1.0.0"
+  },
+  "paths": { ... },
+  "components": {
+    "schemas": { ... }
+  }
+}`;
 
 @Component({
 	selector: "app-upload",
@@ -17,21 +29,28 @@ type SpecSummary = components["schemas"]["SpecSummary"];
 	imports: [RouterLink],
 	template: `
     <div class="upload-container">
-      <h1>RestAtlas</h1>
-      <p>Paste an OpenAPI spec (JSON) or upload a file</p>
+      <h1><img src="assets/icons/restatlas.svg" alt="" class="logo" /> RestAtlas</h1>
+      <p class="subtitle">Visual OpenAPI Explorer — paste a spec or upload a file to visualize your API as an interactive graph.</p>
 
-      <textarea
-        #specInput
-        rows="12"
-        placeholder='{"openapi": "3.0.3", "info": {...}, "paths": {...}}'
-      ></textarea>
+      <div class="textarea-wrapper">
+        <div class="textarea-toolbar">
+          <button class="use-example" (click)="loadDemo()" [disabled]="loading()">
+            Use example
+          </button>
+        </div>
+        <textarea
+          #specInput
+          [placeholder]="placeholder"
+          (input)="autoResize()"
+        ></textarea>
+      </div>
 
       <div class="actions">
         <label class="file-label">
           Upload file
           <input type="file" accept=".json,.yaml,.yml" (change)="onFileSelect($event)" hidden />
         </label>
-        <button (click)="submit()" [disabled]="loading()">
+        <button class="primary-btn" (click)="submit()" [disabled]="loading()">
           {{ loading() ? 'Uploading...' : 'Upload Spec' }}
         </button>
       </div>
@@ -55,25 +74,74 @@ type SpecSummary = components["schemas"]["SpecSummary"];
 	styles: `
     .upload-container {
       max-width: 700px;
-      margin: 2rem auto;
+      margin: 3rem auto;
       padding: 1rem;
       font-family: system-ui, sans-serif;
     }
+    h1 {
+      font-size: 1.75rem;
+      margin: 0 0 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+    }
+    .subtitle {
+      color: #555;
+      font-size: 0.9rem;
+      margin: 0 0 1.5rem;
+      line-height: 1.5;
+    }
+    .textarea-wrapper {
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .textarea-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0.375rem 0.5rem;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .use-example {
+      background: none;
+      border: none;
+      color: #2563eb;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0.125rem 0.375rem;
+      border-radius: 3px;
+    }
+    .use-example:hover {
+      background: #eff6ff;
+    }
+    .use-example:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     textarea {
       width: 100%;
+      min-height: 360px;
+      max-height: 500px;
       font-family: monospace;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       padding: 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
+      border: none;
+      outline: none;
+      resize: none;
+      line-height: 1.5;
+      box-sizing: border-box;
     }
     .actions {
       display: flex;
       gap: 0.75rem;
       margin-top: 0.75rem;
     }
-    button, .file-label {
+    .primary-btn {
       padding: 0.5rem 1rem;
       border: 1px solid #333;
       border-radius: 4px;
@@ -82,13 +150,21 @@ type SpecSummary = components["schemas"]["SpecSummary"];
       color: #fff;
       font-size: 0.875rem;
     }
-    button:disabled {
+    .primary-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     .file-label {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      cursor: pointer;
       background: #fff;
       color: #333;
+      font-size: 0.875rem;
+    }
+    .file-label:hover {
+      background: #f9fafb;
     }
     .error {
       margin-top: 1rem;
@@ -101,7 +177,12 @@ type SpecSummary = components["schemas"]["SpecSummary"];
       margin-top: 1rem;
       padding: 1rem;
       background: #f0fdf4;
-      border-radius: 4px;
+      border-radius: 6px;
+      border: 1px solid #bbf7d0;
+    }
+    .summary h2 {
+      margin: 0;
+      font-size: 1.1rem;
     }
     .version {
       color: #666;
@@ -112,6 +193,7 @@ type SpecSummary = components["schemas"]["SpecSummary"];
       gap: 1rem;
       margin-top: 0.5rem;
       color: #555;
+      font-size: 0.875rem;
     }
     .view-link {
       display: inline-block;
@@ -130,11 +212,14 @@ type SpecSummary = components["schemas"]["SpecSummary"];
 })
 export class UploadComponent {
 	private readonly api = inject(ApiService);
+	private readonly router = inject(Router);
 	specInput = viewChild.required<ElementRef<HTMLTextAreaElement>>("specInput");
 
 	loading = signal(false);
 	error = signal<string | null>(null);
 	summary = signal<SpecSummary | null>(null);
+
+	readonly placeholder = PLACEHOLDER_JSON;
 
 	async onFileSelect(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -143,6 +228,32 @@ export class UploadComponent {
 
 		const text = await file.text();
 		this.specInput().nativeElement.value = text;
+		this.autoResize();
+	}
+
+	autoResize(): void {
+		const el = this.specInput().nativeElement;
+		el.style.height = "auto";
+		el.style.height = `${Math.min(el.scrollHeight, 500)}px`;
+	}
+
+	async loadDemo() {
+		this.error.set(null);
+		this.summary.set(null);
+		this.loading.set(true);
+
+		try {
+			const { data, error } = await this.api.loadDemo();
+			if (error) {
+				this.error.set("Failed to load demo");
+			} else if (data) {
+				this.router.navigate(["/specs", data.id]);
+			}
+		} catch {
+			this.error.set("Network error — is the backend running?");
+		} finally {
+			this.loading.set(false);
+		}
 	}
 
 	async submit() {

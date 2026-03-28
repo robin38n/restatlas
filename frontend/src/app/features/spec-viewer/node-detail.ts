@@ -26,8 +26,6 @@ function asRecord(v: unknown): Record<string, unknown> | null {
     @if (svc.selectedNode(); as node) {
       <aside class="detail-panel">
         <div class="panel-header">
-          <button class="close" (click)="svc.clearSelection()">&times;</button>
-
           @if (node.type === 'endpoint') {
             <div class="endpoint-header">
               <span class="method" [attr.data-method]="asEndpoint(node).method">
@@ -167,13 +165,7 @@ function asRecord(v: unknown): Record<string, unknown> | null {
   `,
 	styles: `
     .detail-panel {
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 1rem;
-      background: #fff;
       font-size: 0.875rem;
-      max-height: 500px;
-      overflow-y: auto;
     }
     .panel-header {
       margin-bottom: 0.75rem;

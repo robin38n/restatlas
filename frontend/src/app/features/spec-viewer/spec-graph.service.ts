@@ -1,4 +1,4 @@
-import { computed, Injectable, inject, signal } from "@angular/core";
+import { computed, effect, Injectable, inject, signal } from "@angular/core";
 import { ApiService } from "../../api/api.service";
 import type { components } from "../../api/schema";
 import type {
@@ -112,6 +112,17 @@ export class SpecGraphService {
 		};
 	});
 
+	// Auto-clear selection when filtered graph no longer contains the selected node
+	private readonly selectionGuard = effect(() => {
+		const fg = this.filteredGraph();
+		const id = this.selectedNodeId();
+		if (!id || !fg) return;
+		const nodeExists = fg.nodes.some((n) => n.id === id);
+		if (!nodeExists) {
+			this.selectedNodeId.set(null);
+		}
+	});
+
 	readonly selectedNode = computed(() => {
 		const id = this.selectedNodeId();
 		if (!id) return null;
@@ -170,7 +181,13 @@ export class SpecGraphService {
 			if (data) {
 				this.summary.set(data.summary);
 				this.rawSpec.set(data.raw as Record<string, unknown>);
-				this.graph.set(buildSpecGraph(data.raw));
+				const graph = buildSpecGraph(data.raw);
+				this.graph.set(graph);
+
+				// Preselect first node
+				if (graph.nodes.length > 0) {
+					this.selectedNodeId.set(graph.nodes[0].id);
+				}
 			}
 		} catch {
 			this.error.set("Network error — is the backend running?");

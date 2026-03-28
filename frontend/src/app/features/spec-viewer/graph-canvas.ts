@@ -80,6 +80,11 @@ function nodeHeight(node: SimNode): number {
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `<div class="graph-container" #container>
 		<svg #svg></svg>
+		@if (graph().nodes.length === 0) {
+			<div class="empty-state">
+				<p>No nodes match the current filters</p>
+			</div>
+		}
 	</div>`,
 	styles: `
 		.graph-container {
@@ -89,10 +94,22 @@ function nodeHeight(node: SimNode): number {
 			border-radius: 6px;
 			overflow: hidden;
 			background: #fafafa;
+			position: relative;
 		}
 		svg {
 			width: 100%;
 			height: 100%;
+		}
+		.empty-state {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.empty-state p {
+			color: #999;
+			font-size: 0.9rem;
 		}
 	`,
 })
@@ -123,19 +140,20 @@ export class GraphCanvasComponent {
 
 	private initGraph(): void {
 		const graph = this.graph();
-		if (!graph || graph.nodes.length === 0) return;
-
-		const container = this.containerRef().nativeElement;
 		const svgEl = this.svgRef().nativeElement;
-		const width = container.clientWidth || 800;
-		const height = container.clientHeight || 500;
 
-		// Clear previous
+		// Clear previous simulation and SVG content
 		if (this.simulation) {
 			this.simulation.stop();
 			this.simulation = null;
 		}
 		d3.select(svgEl).selectAll("*").remove();
+
+		if (!graph || graph.nodes.length === 0) return;
+
+		const container = this.containerRef().nativeElement;
+		const width = container.clientWidth || 800;
+		const height = container.clientHeight || 500;
 
 		// Build mutable copies for D3
 		const nodes: SimNode[] = graph.nodes.map((n) => {

@@ -32,7 +32,7 @@ import { SpecGraphService } from "./spec-graph.service";
       @if (svc.summary(); as s) {
         <header>
           <a routerLink="/" class="back">&larr; Upload</a>
-          <h1>{{ s.title }} <span class="version">v{{ s.version }}</span></h1>
+          <h1><img src="assets/icons/restatlas.svg" alt="" class="logo" /> {{ s.title }} <span class="version">v{{ s.version }}</span></h1>
           <div class="stats">
             <span class="stat">{{ svc.endpointNodes().length }} endpoints</span>
             <span class="stat">{{ svc.schemaNodes().length }} schemas</span>
@@ -45,21 +45,18 @@ import { SpecGraphService } from "./spec-graph.service";
         @if (displayGraph(); as g) {
           <app-graph-canvas [graph]="g" (nodeClick)="onNodeClick($event)" />
 
-          <div class="main-layout">
-            <div class="sidebar">
+          <div class="detail-card">
+            <div class="list-pane">
               <section>
                 <h2>Endpoints</h2>
                 @for (ep of filteredEndpoints(); track ep.id) {
                   <div
-                    class="endpoint"
+                    class="list-item"
                     [class.selected]="svc.selectedNodeId() === ep.id"
                     (click)="onNodeClick(ep)"
                   >
                     <span class="method" [attr.data-method]="ep.method">{{ ep.method }}</span>
                     <span class="path">{{ ep.path }}</span>
-                    @if (ep.summary) {
-                      <span class="ep-summary">{{ ep.summary }}</span>
-                    }
                   </div>
                 } @empty {
                   <p class="empty">No endpoints found</p>
@@ -70,15 +67,12 @@ import { SpecGraphService } from "./spec-graph.service";
                 <h2>Schemas</h2>
                 @for (sc of filteredSchemas(); track sc.id) {
                   <div
-                    class="schema-card"
+                    class="list-item"
                     [class.selected]="svc.selectedNodeId() === sc.id"
                     (click)="onNodeClick(sc)"
                   >
                     <strong>{{ sc.name }}</strong>
                     <span class="prop-count">{{ sc.properties.length }} props</span>
-                    @if (sc.properties.length > 0) {
-                      <div class="props">{{ sc.properties.join(', ') }}</div>
-                    }
                   </div>
                 } @empty {
                   <p class="empty">No schemas found</p>
@@ -86,11 +80,13 @@ import { SpecGraphService } from "./spec-graph.service";
               </section>
             </div>
 
-            @if (svc.selectedNode()) {
-              <div class="detail">
+            <div class="detail-pane">
+              @if (svc.selectedNode()) {
                 <app-node-detail />
-              </div>
-            }
+              } @else {
+                <p class="empty hint">Select an endpoint or schema to see details</p>
+              }
+            </div>
           </div>
         }
       }
@@ -103,9 +99,7 @@ import { SpecGraphService } from "./spec-graph.service";
       padding: 1rem;
       font-family: system-ui, sans-serif;
     }
-    .status {
-      color: #666;
-    }
+    .status { color: #666; }
     .error {
       padding: 0.75rem;
       background: #fef2f2;
@@ -117,11 +111,16 @@ import { SpecGraphService } from "./spec-graph.service";
       text-decoration: none;
       font-size: 0.875rem;
     }
-    .back:hover {
-      color: #333;
-    }
+    .back:hover { color: #333; }
     header h1 {
       margin: 0.5rem 0 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo {
+      width: 28px;
+      height: 28px;
     }
     .version {
       color: #666;
@@ -140,45 +139,61 @@ import { SpecGraphService } from "./spec-graph.service";
       font-size: 0.875rem;
       color: #555;
     }
-    .main-layout {
+
+    /* Outer card wrapping both list and detail */
+    .detail-card {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
       margin-top: 1.5rem;
+      overflow: hidden;
+      background: #fff;
     }
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    .list-pane {
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 600px;
+      border-right: 1px solid #e5e7eb;
     }
+    .detail-pane {
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+
     h2 {
-      font-size: 1rem;
-      margin: 0 0 0.75rem;
-      color: #333;
+      font-size: 0.8rem;
+      margin: 0 0 0.5rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    .endpoint {
+    section + section {
+      margin-top: 1rem;
+    }
+
+    .list-item {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem;
-      border: 1px solid #e5e7eb;
+      padding: 0.4rem 0.5rem;
       border-radius: 4px;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
+      margin-bottom: 0.125rem;
+      font-size: 0.85rem;
       cursor: pointer;
-      transition: border-color 0.15s;
+      transition: background 0.1s;
     }
-    .endpoint:hover {
-      border-color: #9ca3af;
+    .list-item:hover {
+      background: #f3f4f6;
     }
-    .endpoint.selected {
-      border-color: #2563eb;
+    .list-item.selected {
       background: #eff6ff;
     }
     .method {
       font-weight: 600;
-      font-size: 0.75rem;
-      padding: 0.125rem 0.375rem;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.3rem;
       border-radius: 3px;
       color: #fff;
       background: #6b7280;
@@ -191,42 +206,20 @@ import { SpecGraphService } from "./spec-graph.service";
     .method[data-method="DELETE"] { background: #dc2626; }
     .path {
       font-family: monospace;
-      font-weight: 500;
-    }
-    .ep-summary {
-      color: #888;
       font-size: 0.8rem;
     }
-    .schema-card {
-      padding: 0.5rem;
-      border: 1px solid #e5e7eb;
-      border-radius: 4px;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: border-color 0.15s;
-    }
-    .schema-card:hover {
-      border-color: #9ca3af;
-    }
-    .schema-card.selected {
-      border-color: #64748b;
-      background: #f8fafc;
-    }
     .prop-count {
-      margin-left: 0.5rem;
+      margin-left: auto;
       color: #888;
       font-size: 0.75rem;
-    }
-    .props {
-      margin-top: 0.25rem;
-      font-family: monospace;
-      font-size: 0.75rem;
-      color: #666;
     }
     .empty {
       color: #999;
       font-size: 0.875rem;
+    }
+    .hint {
+      margin-top: 2rem;
+      text-align: center;
     }
   `,
 })
@@ -234,7 +227,6 @@ export class SpecViewerComponent implements OnInit {
 	protected readonly svc = inject(SpecGraphService);
 	private readonly route = inject(ActivatedRoute);
 
-	/** Use filteredGraph when filters are active, otherwise the full graph. */
 	protected readonly displayGraph = computed(
 		() => this.svc.filteredGraph() ?? this.svc.graph(),
 	);

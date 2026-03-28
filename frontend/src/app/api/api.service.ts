@@ -19,4 +19,19 @@ export class ApiService {
 	healthCheck() {
 		return this.client.GET("/health");
 	}
+
+	async loadDemo(): Promise<{
+		data?: {
+			id: string;
+			title: string;
+			version: string;
+			endpointCount: number;
+			schemaCount: number;
+		};
+		error?: unknown;
+	}> {
+		const res = await fetch("/api/demo", { method: "POST" });
+		if (!res.ok) return { error: await res.json() };
+		return { data: await res.json() };
+	}
 }
