@@ -1,11 +1,24 @@
-import { Component, inject, type OnInit } from "@angular/core";
+import { Component, computed, inject, type OnInit } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
+import type {
+	EndpointNode,
+	GraphNode,
+	SchemaNode,
+} from "../../models/graph.model";
+import { GraphCanvasComponent } from "./graph-canvas";
+import { GraphToolbarComponent } from "./graph-toolbar";
+import { NodeDetailComponent } from "./node-detail";
 import { SpecGraphService } from "./spec-graph.service";
 
 @Component({
 	selector: "app-spec-viewer",
 	standalone: true,
-	imports: [RouterLink],
+	imports: [
+		RouterLink,
+		GraphCanvasComponent,
+		GraphToolbarComponent,
+		NodeDetailComponent,
+	],
 	template: `
     <div class="viewer">
       @if (svc.loading()) {
@@ -27,71 +40,65 @@ import { SpecGraphService } from "./spec-graph.service";
           </div>
         </header>
 
-        <div class="columns">
-          <section>
-            <h2>Endpoints</h2>
-            @for (ep of svc.endpointNodes(); track ep.id) {
-              <div class="endpoint">
-                <span class="method" [attr.data-method]="ep.method">{{ ep.method }}</span>
-                <span class="path">{{ ep.path }}</span>
-                @if (ep.summary) {
-                  <span class="summary">{{ ep.summary }}</span>
-                }
-              </div>
-            } @empty {
-              <p class="empty">No endpoints found</p>
-            }
-          </section>
+        <app-graph-toolbar />
 
-          <section>
-            <h2>Schemas</h2>
-            @for (sc of svc.schemaNodes(); track sc.id) {
-              <div class="schema-card">
-                <strong>{{ sc.name }}</strong>
-                <span class="prop-count">{{ sc.properties.length }} props</span>
-                @if (sc.properties.length > 0) {
-                  <div class="props">{{ sc.properties.join(', ') }}</div>
-                }
-              </div>
-            } @empty {
-              <p class="empty">No schemas found</p>
-            }
-          </section>
-        </div>
+        @if (displayGraph(); as g) {
+          <app-graph-canvas [graph]="g" (nodeClick)="onNodeClick($event)" />
 
-        @if (svc.graph(); as g) {
-          @if (g.edges.length > 0) {
-            <section class="edges">
-              <h2>Relationships</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Source</th>
-                    <th>Kind</th>
-                    <th>Target</th>
-                    <th>Label</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (edge of g.edges; track $index) {
-                    <tr>
-                      <td>{{ edge.source }}</td>
-                      <td><span class="edge-kind">{{ edge.kind }}</span></td>
-                      <td>{{ edge.target }}</td>
-                      <td>{{ edge.label ?? '' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </section>
-          }
+          <div class="main-layout">
+            <div class="sidebar">
+              <section>
+                <h2>Endpoints</h2>
+                @for (ep of filteredEndpoints(); track ep.id) {
+                  <div
+                    class="endpoint"
+                    [class.selected]="svc.selectedNodeId() === ep.id"
+                    (click)="onNodeClick(ep)"
+                  >
+                    <span class="method" [attr.data-method]="ep.method">{{ ep.method }}</span>
+                    <span class="path">{{ ep.path }}</span>
+                    @if (ep.summary) {
+                      <span class="ep-summary">{{ ep.summary }}</span>
+                    }
+                  </div>
+                } @empty {
+                  <p class="empty">No endpoints found</p>
+                }
+              </section>
+
+              <section>
+                <h2>Schemas</h2>
+                @for (sc of filteredSchemas(); track sc.id) {
+                  <div
+                    class="schema-card"
+                    [class.selected]="svc.selectedNodeId() === sc.id"
+                    (click)="onNodeClick(sc)"
+                  >
+                    <strong>{{ sc.name }}</strong>
+                    <span class="prop-count">{{ sc.properties.length }} props</span>
+                    @if (sc.properties.length > 0) {
+                      <div class="props">{{ sc.properties.join(', ') }}</div>
+                    }
+                  </div>
+                } @empty {
+                  <p class="empty">No schemas found</p>
+                }
+              </section>
+            </div>
+
+            @if (svc.selectedNode()) {
+              <div class="detail">
+                <app-node-detail />
+              </div>
+            }
+          </div>
         }
       }
     </div>
   `,
 	styles: `
     .viewer {
-      max-width: 960px;
+      max-width: 1200px;
       margin: 2rem auto;
       padding: 1rem;
       font-family: system-ui, sans-serif;
@@ -124,6 +131,7 @@ import { SpecGraphService } from "./spec-graph.service";
       display: flex;
       gap: 1rem;
       margin-top: 0.5rem;
+      margin-bottom: 1rem;
     }
     .stat {
       padding: 0.25rem 0.5rem;
@@ -132,11 +140,16 @@ import { SpecGraphService } from "./spec-graph.service";
       font-size: 0.875rem;
       color: #555;
     }
-    .columns {
+    .main-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1.5rem;
       margin-top: 1.5rem;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
     h2 {
       font-size: 1rem;
@@ -152,6 +165,15 @@ import { SpecGraphService } from "./spec-graph.service";
       border-radius: 4px;
       margin-bottom: 0.5rem;
       font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .endpoint:hover {
+      border-color: #9ca3af;
+    }
+    .endpoint.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
     }
     .method {
       font-weight: 600;
@@ -160,6 +182,7 @@ import { SpecGraphService } from "./spec-graph.service";
       border-radius: 3px;
       color: #fff;
       background: #6b7280;
+      flex-shrink: 0;
     }
     .method[data-method="GET"] { background: #16a34a; }
     .method[data-method="POST"] { background: #2563eb; }
@@ -170,7 +193,7 @@ import { SpecGraphService } from "./spec-graph.service";
       font-family: monospace;
       font-weight: 500;
     }
-    .summary {
+    .ep-summary {
       color: #888;
       font-size: 0.8rem;
     }
@@ -180,6 +203,15 @@ import { SpecGraphService } from "./spec-graph.service";
       border-radius: 4px;
       margin-bottom: 0.5rem;
       font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .schema-card:hover {
+      border-color: #9ca3af;
+    }
+    .schema-card.selected {
+      border-color: #64748b;
+      background: #f8fafc;
     }
     .prop-count {
       margin-left: 0.5rem;
@@ -192,30 +224,6 @@ import { SpecGraphService } from "./spec-graph.service";
       font-size: 0.75rem;
       color: #666;
     }
-    .edges {
-      margin-top: 1.5rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 0.375rem 0.5rem;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    th {
-      font-weight: 600;
-      color: #555;
-    }
-    .edge-kind {
-      font-family: monospace;
-      padding: 0.125rem 0.25rem;
-      background: #f3f4f6;
-      border-radius: 3px;
-      font-size: 0.7rem;
-    }
     .empty {
       color: #999;
       font-size: 0.875rem;
@@ -226,10 +234,33 @@ export class SpecViewerComponent implements OnInit {
 	protected readonly svc = inject(SpecGraphService);
 	private readonly route = inject(ActivatedRoute);
 
+	/** Use filteredGraph when filters are active, otherwise the full graph. */
+	protected readonly displayGraph = computed(
+		() => this.svc.filteredGraph() ?? this.svc.graph(),
+	);
+
+	protected readonly filteredEndpoints = computed(
+		() =>
+			this.displayGraph()?.nodes.filter(
+				(n): n is EndpointNode => n.type === "endpoint",
+			) ?? [],
+	);
+
+	protected readonly filteredSchemas = computed(
+		() =>
+			this.displayGraph()?.nodes.filter(
+				(n): n is SchemaNode => n.type === "schema",
+			) ?? [],
+	);
+
 	ngOnInit() {
 		const id = this.route.snapshot.paramMap.get("id");
 		if (id) {
 			this.svc.loadSpec(id);
 		}
+	}
+
+	onNodeClick(node: GraphNode): void {
+		this.svc.selectNode(node);
 	}
 }
