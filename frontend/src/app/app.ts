@@ -11,6 +11,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 				<span class="brand-name">ReqViz</span>
 			</a>
 			<div class="nav-links">
+				<a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Explorer</a>
 				<a routerLink="/api-client" routerLinkActive="active" class="nav-link">API Client</a>
 			</div>
 		</nav>
