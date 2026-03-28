@@ -1,6 +1,7 @@
-import { Component, computed, inject, type Signal } from "@angular/core";
+import { Component, computed, inject, signal, type Signal } from "@angular/core";
 import type { EndpointNode, SchemaNode } from "../../models/graph.model";
 import { SpecGraphService } from "./spec-graph.service";
+import { TryItOutComponent } from "./try-it-out";
 
 /** Safely navigate a nested object by dot-separated keys. */
 function dig(obj: unknown, ...keys: string[]): unknown {
@@ -21,7 +22,7 @@ function asRecord(v: unknown): Record<string, unknown> | null {
 @Component({
 	selector: "app-node-detail",
 	standalone: true,
-	imports: [],
+	imports: [TryItOutComponent],
 	template: `
     @if (svc.selectedNode(); as node) {
       <aside class="detail-panel">
@@ -54,53 +55,64 @@ function asRecord(v: unknown): Record<string, unknown> | null {
         </div>
 
         @if (node.type === 'endpoint') {
-          <!-- Parameters -->
-          @if (endpointParams().length > 0) {
-            <section>
-              <h4>Parameters</h4>
-              <table class="params-table">
-                <thead>
-                  <tr><th>Name</th><th>In</th><th>Type</th><th>Req</th></tr>
-                </thead>
-                <tbody>
-                  @for (p of endpointParams(); track p.name) {
-                    <tr>
-                      <td><code>{{ p.name }}</code></td>
-                      <td>{{ p.in }}</td>
-                      <td>{{ p.type }}</td>
-                      <td>{{ p.required ? 'Yes' : '' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </section>
-          }
+          <div class="tab-bar">
+            <button class="tab-btn" [class.active]="activeTab() === 'details'" (click)="activeTab.set('details')">Details</button>
+            <button class="tab-btn" [class.active]="activeTab() === 'try-it'" (click)="activeTab.set('try-it')">Try It Out</button>
+          </div>
 
-          <!-- Request Body -->
-          @if (requestBodySchemas().length > 0) {
-            <section>
-              <h4>Request Body</h4>
-              @for (ref of requestBodySchemas(); track ref) {
-                <button class="schema-link" (click)="navigateTo(ref)">{{ ref }}</button>
-              }
-            </section>
-          }
+          <div [hidden]="activeTab() !== 'details'">
+            <!-- Parameters -->
+            @if (endpointParams().length > 0) {
+              <section>
+                <h4>Parameters</h4>
+                <table class="params-table">
+                  <thead>
+                    <tr><th>Name</th><th>In</th><th>Type</th><th>Req</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (p of endpointParams(); track p.name) {
+                      <tr>
+                        <td><code>{{ p.name }}</code></td>
+                        <td>{{ p.in }}</td>
+                        <td>{{ p.type }}</td>
+                        <td>{{ p.required ? 'Yes' : '' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </section>
+            }
 
-          <!-- Responses -->
-          @if (responseEntries().length > 0) {
-            <section>
-              <h4>Responses</h4>
-              @for (r of responseEntries(); track r.status) {
-                <div class="response-entry">
-                  <span class="status-code" [attr.data-status]="r.statusGroup">{{ r.status }}</span>
-                  <span class="response-desc">{{ r.description }}</span>
-                  @for (ref of r.schemas; track ref) {
-                    <button class="schema-link" (click)="navigateTo(ref)">{{ ref }}</button>
-                  }
-                </div>
-              }
-            </section>
-          }
+            <!-- Request Body -->
+            @if (requestBodySchemas().length > 0) {
+              <section>
+                <h4>Request Body</h4>
+                @for (ref of requestBodySchemas(); track ref) {
+                  <button class="schema-link" (click)="navigateTo(ref)">{{ ref }}</button>
+                }
+              </section>
+            }
+
+            <!-- Responses -->
+            @if (responseEntries().length > 0) {
+              <section>
+                <h4>Responses</h4>
+                @for (r of responseEntries(); track r.status) {
+                  <div class="response-entry">
+                    <span class="status-code" [attr.data-status]="r.statusGroup">{{ r.status }}</span>
+                    <span class="response-desc">{{ r.description }}</span>
+                    @for (ref of r.schemas; track ref) {
+                      <button class="schema-link" (click)="navigateTo(ref)">{{ ref }}</button>
+                    }
+                  </div>
+                }
+              </section>
+            }
+          </div>
+
+          <div [hidden]="activeTab() !== 'try-it'">
+            <app-try-it-out />
+          </div>
         }
 
         @if (node.type === 'schema') {
@@ -329,10 +341,39 @@ function asRecord(v: unknown): Record<string, unknown> | null {
       font-size: 0.7rem;
       color: #dc2626;
     }
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.35rem 0;
+      font-size: 0.8rem;
+      border: none;
+      background: #fff;
+      color: #666;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn:not(:last-child) {
+      border-right: 1px solid #e5e7eb;
+    }
+    .tab-btn.active {
+      background: #1e293b;
+      color: #fff;
+    }
+    .tab-btn:hover:not(.active) {
+      background: #f3f4f6;
+    }
   `,
 })
 export class NodeDetailComponent {
 	protected readonly svc = inject(SpecGraphService);
+	readonly activeTab = signal<"details" | "try-it">("details");
 
 	/** Helper to extract raw operation object from the spec for an endpoint. */
 	private readonly rawOperation: Signal<Record<string, unknown> | null> =

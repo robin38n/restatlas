@@ -1,6 +1,14 @@
 import { Injectable } from "@angular/core";
 import createClient from "openapi-fetch";
-import type { paths } from "./schema";
+import type { components, paths } from "./schema";
+
+type ProxyRequestBody = components["schemas"]["ProxyRequest"];
+
+export interface DemoInfo {
+	slug: string;
+	title: string;
+	description: string;
+}
 
 @Injectable({ providedIn: "root" })
 export class ApiService {
@@ -20,7 +28,20 @@ export class ApiService {
 		return this.client.GET("/health");
 	}
 
-	async loadDemo(): Promise<{
+	proxyRequest(body: ProxyRequestBody) {
+		return this.client.POST("/proxy", { body });
+	}
+
+	async listDemos(): Promise<{
+		data?: DemoInfo[];
+		error?: unknown;
+	}> {
+		const res = await fetch("/api/demos");
+		if (!res.ok) return { error: await res.json() };
+		return { data: await res.json() };
+	}
+
+	async loadDemo(slug: string): Promise<{
 		data?: {
 			id: string;
 			title: string;
@@ -30,7 +51,9 @@ export class ApiService {
 		};
 		error?: unknown;
 	}> {
-		const res = await fetch("/api/demo", { method: "POST" });
+		const res = await fetch(`/api/demos/${encodeURIComponent(slug)}`, {
+			method: "POST",
+		});
 		if (!res.ok) return { error: await res.json() };
 		return { data: await res.json() };
 	}

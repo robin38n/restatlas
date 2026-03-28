@@ -9,6 +9,7 @@ import {
 	viewChild,
 } from "@angular/core";
 import * as d3 from "d3";
+import { Graph, layout as dagreLayout } from "@dagrejs/dagre";
 import type {
 	EdgeKind,
 	EndpointNode,
@@ -16,9 +17,10 @@ import type {
 	SchemaNode,
 	SpecGraph,
 } from "../../models/graph.model";
+import { GraphControlsComponent } from "./graph-controls";
+import { GraphLegendComponent } from "./graph-legend";
 
-/** Mutable copy of GraphNode for D3 force simulation (adds x, y, vx, vy). */
-interface SimNode extends d3.SimulationNodeDatum {
+interface SimNode {
 	id: string;
 	type: "endpoint" | "schema";
 	label: string;
@@ -26,13 +28,17 @@ interface SimNode extends d3.SimulationNodeDatum {
 	method?: string;
 	width: number;
 	height: number;
+	x: number;
+	y: number;
 	original: GraphNode;
 }
 
-/** Mutable copy of GraphEdge for D3 force simulation (source/target become object refs). */
-interface SimLink extends d3.SimulationLinkDatum<SimNode> {
+interface SimLink {
+	source: string;
+	target: string;
 	kind: EdgeKind;
 	label?: string;
+	points?: Array<{ x: number; y: number }>;
 }
 
 const METHOD_COLORS: Record<string, string> = {
@@ -43,15 +49,6 @@ const METHOD_COLORS: Record<string, string> = {
 	DELETE: "#dc2626",
 	HEAD: "#6b7280",
 	OPTIONS: "#6b7280",
-};
-
-const EDGE_COLORS: Record<EdgeKind, string> = {
-	requestBody: "#2563eb",
-	response: "#16a34a",
-	parameter: "#d97706",
-	property: "#6b7280",
-	arrayItem: "#9333ea",
-	composition: "#dc2626",
 };
 
 const EDGE_DASH: Record<EdgeKind, string> = {
@@ -66,20 +63,40 @@ const EDGE_DASH: Record<EdgeKind, string> = {
 const SCHEMA_FILL = "#f8fafc";
 const SCHEMA_STROKE = "#64748b";
 
-function nodeWidth(node: SimNode): number {
-	return node.width;
-}
-
-function nodeHeight(node: SimNode): number {
-	return node.height;
+function edgeColor(kind: EdgeKind, label?: string): string {
+	switch (kind) {
+		case "requestBody":
+			return "#2563eb";
+		case "parameter":
+			return "#6366f1";
+		case "response": {
+			const ch = label?.charAt(0);
+			if (ch === "2") return "#16a34a";
+			if (ch === "4") return "#ef4444";
+			if (ch === "5") return "#991b1b";
+			return "#16a34a"; // default for response
+		}
+		case "property":
+		case "arrayItem":
+		case "composition":
+			return "#94a3b8";
+	}
 }
 
 @Component({
 	selector: "app-graph-canvas",
 	standalone: true,
+	imports: [GraphControlsComponent, GraphLegendComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `<div class="graph-container" #container>
 		<svg #svg></svg>
+		<app-graph-legend />
+		<app-graph-controls
+			(zoomIn)="onZoomIn()"
+			(zoomOut)="onZoomOut()"
+			(resetZoom)="onResetZoom()"
+			(fullscreen)="onFullscreen()"
+		/>
 		@if (graph().nodes.length === 0) {
 			<div class="empty-state">
 				<p>No nodes match the current filters</p>
@@ -122,17 +139,19 @@ export class GraphCanvasComponent {
 	private readonly containerRef =
 		viewChild.required<ElementRef<HTMLDivElement>>("container");
 
-	private simulation: d3.Simulation<SimNode, SimLink> | null = null;
+	private initialized = false;
+	private zoom: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
+	private svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
 
 	constructor() {
 		afterNextRender(() => {
+			this.initialized = true;
 			this.initGraph();
 		});
 
-		// Re-render when graph input changes after initial render
 		effect(() => {
 			const g = this.graph();
-			if (this.simulation && g) {
+			if (this.initialized && g) {
 				this.initGraph();
 			}
 		});
@@ -142,11 +161,6 @@ export class GraphCanvasComponent {
 		const graph = this.graph();
 		const svgEl = this.svgRef().nativeElement;
 
-		// Clear previous simulation and SVG content
-		if (this.simulation) {
-			this.simulation.stop();
-			this.simulation = null;
-		}
 		d3.select(svgEl).selectAll("*").remove();
 
 		if (!graph || graph.nodes.length === 0) return;
@@ -155,7 +169,7 @@ export class GraphCanvasComponent {
 		const width = container.clientWidth || 800;
 		const height = container.clientHeight || 500;
 
-		// Build mutable copies for D3
+		// Build mutable node copies
 		const nodes: SimNode[] = graph.nodes.map((n) => {
 			if (n.type === "endpoint") {
 				const ep = n as EndpointNode;
@@ -168,6 +182,8 @@ export class GraphCanvasComponent {
 					method: ep.method,
 					width: Math.max(140, label.length * 7.5 + 24),
 					height: 40,
+					x: 0,
+					y: 0,
 					original: n,
 				};
 			}
@@ -180,6 +196,8 @@ export class GraphCanvasComponent {
 				sublabel: propText,
 				width: Math.max(120, sc.name.length * 8 + 24),
 				height: 44,
+				x: 0,
+				y: 0,
 				original: n,
 			};
 		});
@@ -195,18 +213,56 @@ export class GraphCanvasComponent {
 				label: e.label,
 			}));
 
-		// SVG setup
+		// --- Dagre layout ---
+		const g2 = new Graph()
+			.setGraph({
+				rankdir: "TB",
+				nodesep: 40,
+				ranksep: 120,
+				edgesep: 20,
+			})
+			.setDefaultEdgeLabel(() => ({}));
+
+		for (const node of nodes) {
+			g2.setNode(node.id, { width: node.width, height: node.height });
+		}
+		for (const link of links) {
+			g2.setEdge(link.source, link.target);
+		}
+
+		dagreLayout(g2);
+
+		// Read positions back
+		for (const node of nodes) {
+			const pos = g2.node(node.id);
+			node.x = pos.x - node.width / 2;
+			node.y = pos.y - node.height / 2;
+		}
+
+		// Read edge routing points
+		for (const link of links) {
+			const edgeData = g2.edge(link.source, link.target);
+			if (edgeData?.points) {
+				link.points = edgeData.points;
+			}
+		}
+
+		// --- SVG setup ---
 		const svg = d3
 			.select(svgEl)
 			.attr("viewBox", `0 0 ${width} ${height}`)
 			.attr("preserveAspectRatio", "xMidYMid meet");
 
-		// Arrow markers for each edge kind
+		// Arrow markers keyed by color
 		const defs = svg.append("defs");
-		for (const [kind, color] of Object.entries(EDGE_COLORS)) {
+		const uniqueColors = new Set(
+			links.map((l) => edgeColor(l.kind, l.label)),
+		);
+		for (const color of uniqueColors) {
+			const hex = color.replace("#", "");
 			defs
 				.append("marker")
-				.attr("id", `arrow-${kind}`)
+				.attr("id", `arrow-${hex}`)
 				.attr("viewBox", "0 0 10 6")
 				.attr("refX", 10)
 				.attr("refY", 3)
@@ -218,32 +274,64 @@ export class GraphCanvasComponent {
 				.attr("fill", color);
 		}
 
-		const g = svg.append("g");
+		const rootG = svg.append("g");
 
 		// Zoom
 		const zoom = d3
 			.zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.2, 4])
 			.on("zoom", (event) => {
-				g.attr("transform", event.transform);
+				rootG.attr("transform", event.transform);
 			});
 		svg.call(zoom);
+		this.zoom = zoom;
+		this.svgSelection = svg;
 
-		// Edges
-		const linkGroup = g
+		// Curve generator
+		const lineGen = d3
+			.line<{ x: number; y: number }>()
+			.x((d) => d.x)
+			.y((d) => d.y)
+			.curve(d3.curveBasis);
+
+		// Helper: build path points for a link using current node positions
+		const buildPathPoints = (d: SimLink): Array<{ x: number; y: number }> => {
+			if (d.points && d.points.length > 0) {
+				return d.points;
+			}
+			const src = nodeMap.get(d.source)!;
+			const tgt = nodeMap.get(d.target)!;
+			const sx = src.x + src.width / 2;
+			const sy = src.y + src.height / 2;
+			const tx = tgt.x + tgt.width / 2;
+			const ty = tgt.y + tgt.height / 2;
+			return [
+				{ x: sx, y: sy },
+				{ x: (sx + tx) / 2, y: (sy + ty) / 2 },
+				{ x: tx, y: ty },
+			];
+		};
+
+		// Edges as paths
+		const linkGroup = rootG
 			.append("g")
 			.attr("class", "links")
-			.selectAll("line")
+			.selectAll("path")
 			.data(links)
-			.join("line")
-			.attr("stroke", (d) => EDGE_COLORS[d.kind])
+			.join("path")
+			.attr("d", (d) => lineGen(buildPathPoints(d)))
+			.attr("stroke", (d) => edgeColor(d.kind, d.label))
 			.attr("stroke-width", 1.5)
 			.attr("stroke-dasharray", (d) => EDGE_DASH[d.kind])
-			.attr("marker-end", (d) => `url(#arrow-${d.kind})`)
+			.attr(
+				"marker-end",
+				(d) => `url(#arrow-${edgeColor(d.kind, d.label).replace("#", "")})`,
+			)
+			.attr("fill", "none")
 			.attr("opacity", 0.7);
 
-		// Edge labels
-		const edgeLabelGroup = g
+		// Edge labels at midpoint of path
+		const edgeLabelGroup = rootG
 			.append("g")
 			.attr("class", "edge-labels")
 			.selectAll("text")
@@ -253,15 +341,26 @@ export class GraphCanvasComponent {
 			.attr("font-size", 9)
 			.attr("fill", "#888")
 			.attr("text-anchor", "middle")
-			.attr("dy", -4);
+			.attr("dy", -4)
+			.attr("x", (d) => {
+				const pts = buildPathPoints(d);
+				const mid = pts[Math.floor(pts.length / 2)];
+				return mid.x;
+			})
+			.attr("y", (d) => {
+				const pts = buildPathPoints(d);
+				const mid = pts[Math.floor(pts.length / 2)];
+				return mid.y;
+			});
 
 		// Node groups
-		const nodeGroup = g
+		const nodeGroup = rootG
 			.append("g")
 			.attr("class", "nodes")
 			.selectAll<SVGGElement, SimNode>("g")
 			.data(nodes)
 			.join("g")
+			.attr("transform", (d) => `translate(${d.x},${d.y})`)
 			.attr("cursor", "pointer")
 			.on("click", (_event, d) => {
 				this.nodeClick.emit(d.original);
@@ -271,8 +370,8 @@ export class GraphCanvasComponent {
 		nodeGroup
 			.filter((d) => d.type === "endpoint")
 			.append("rect")
-			.attr("width", (d) => nodeWidth(d))
-			.attr("height", (d) => nodeHeight(d))
+			.attr("width", (d) => d.width)
+			.attr("height", (d) => d.height)
 			.attr("rx", 4)
 			.attr("ry", 4)
 			.attr("fill", (d) => METHOD_COLORS[d.method ?? "GET"] ?? "#6b7280")
@@ -283,8 +382,8 @@ export class GraphCanvasComponent {
 			.filter((d) => d.type === "endpoint")
 			.append("text")
 			.text((d) => d.label)
-			.attr("x", (d) => nodeWidth(d) / 2)
-			.attr("y", (d) => nodeHeight(d) / 2)
+			.attr("x", (d) => d.width / 2)
+			.attr("y", (d) => d.height / 2)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
 			.attr("fill", "#fff")
@@ -295,32 +394,29 @@ export class GraphCanvasComponent {
 		// Schema rectangles (UML class style)
 		const schemaNodes = nodeGroup.filter((d) => d.type === "schema");
 
-		// Schema header background
 		schemaNodes
 			.append("rect")
-			.attr("width", (d) => nodeWidth(d))
-			.attr("height", (d) => nodeHeight(d))
+			.attr("width", (d) => d.width)
+			.attr("height", (d) => d.height)
 			.attr("rx", 3)
 			.attr("ry", 3)
 			.attr("fill", SCHEMA_FILL)
 			.attr("stroke", SCHEMA_STROKE)
 			.attr("stroke-width", 1.5);
 
-		// Schema divider line (UML style: name above, props below)
 		schemaNodes
 			.append("line")
 			.attr("x1", 0)
 			.attr("y1", 24)
-			.attr("x2", (d) => nodeWidth(d))
+			.attr("x2", (d) => d.width)
 			.attr("y2", 24)
 			.attr("stroke", SCHEMA_STROKE)
 			.attr("stroke-width", 1);
 
-		// Schema name
 		schemaNodes
 			.append("text")
 			.text((d) => d.label)
-			.attr("x", (d) => nodeWidth(d) / 2)
+			.attr("x", (d) => d.width / 2)
 			.attr("y", 15)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
@@ -328,107 +424,97 @@ export class GraphCanvasComponent {
 			.attr("font-size", 12)
 			.attr("font-weight", 700);
 
-		// Schema sublabel (prop count)
 		schemaNodes
 			.append("text")
 			.text((d) => d.sublabel)
-			.attr("x", (d) => nodeWidth(d) / 2)
+			.attr("x", (d) => d.width / 2)
 			.attr("y", 35)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
 			.attr("fill", "#64748b")
 			.attr("font-size", 10);
 
-		// Drag behavior
+		// Drag without simulation
 		const drag = d3
 			.drag<SVGGElement, SimNode>()
-			.on("start", (event, d) => {
-				if (!event.active) simulation.alphaTarget(0.3).restart();
-				d.fx = d.x;
-				d.fy = d.y;
-			})
-			.on("drag", (event, d) => {
-				d.fx = event.x;
-				d.fy = event.y;
-			})
-			.on("end", (event, d) => {
-				if (!event.active) simulation.alphaTarget(0);
-				d.fx = null;
-				d.fy = null;
+			.on("drag", function (event, d) {
+				d.x += event.dx;
+				d.y += event.dy;
+				d3.select(this).attr(
+					"transform",
+					`translate(${d.x},${d.y})`,
+				);
+
+				// Redraw connected edges
+				linkGroup
+					.filter(
+						(l) => l.source === d.id || l.target === d.id,
+					)
+					.each(function (l) {
+						// Clear cached dagre points for dragged links
+						l.points = undefined;
+					})
+					.attr("d", (l) => lineGen(buildPathPoints(l)));
+
+				// Reposition connected edge labels
+				edgeLabelGroup
+					.filter(
+						(l) => l.source === d.id || l.target === d.id,
+					)
+					.attr("x", (l) => {
+						const pts = buildPathPoints(l);
+						return pts[Math.floor(pts.length / 2)].x;
+					})
+					.attr("y", (l) => {
+						const pts = buildPathPoints(l);
+						return pts[Math.floor(pts.length / 2)].y;
+					});
 			});
 
 		nodeGroup.call(drag);
 
-		// Force simulation
-		const simulation = d3
-			.forceSimulation(nodes)
-			.force(
-				"link",
-				d3
-					.forceLink<SimNode, SimLink>(links)
-					.id((d) => d.id)
-					.distance(160),
-			)
-			.force("charge", d3.forceManyBody().strength(-350))
-			.force("center", d3.forceCenter(width / 2, height / 2))
-			.force(
-				"collision",
-				d3
-					.forceCollide<SimNode>()
-					.radius((d) => Math.max(d.width, d.height) / 2 + 10),
-			)
-			.on("tick", () => {
-				// Update link positions — account for node centers and clip to edges
-				linkGroup
-					.attr("x1", (d) => {
-						const src = d.source as SimNode;
-						return (src.x ?? 0) + nodeWidth(src) / 2;
-					})
-					.attr("y1", (d) => {
-						const src = d.source as SimNode;
-						return (src.y ?? 0) + nodeHeight(src) / 2;
-					})
-					.attr("x2", (d) => {
-						const tgt = d.target as SimNode;
-						return (tgt.x ?? 0) + nodeWidth(tgt) / 2;
-					})
-					.attr("y2", (d) => {
-						const tgt = d.target as SimNode;
-						return (tgt.y ?? 0) + nodeHeight(tgt) / 2;
-					});
+		// Zoom-to-fit
+		const graphInfo = g2.graph();
+		const gWidth = graphInfo.width ?? width;
+		const gHeight = graphInfo.height ?? height;
+		const padding = 40;
+		const scale = Math.min(
+			(width - padding * 2) / gWidth,
+			(height - padding * 2) / gHeight,
+			1,
+		);
+		const translateX = (width - gWidth * scale) / 2;
+		const translateY = (height - gHeight * scale) / 2;
+		svg.call(
+			zoom.transform,
+			d3.zoomIdentity.translate(translateX, translateY).scale(scale),
+		);
+	}
 
-				// Edge labels at midpoint
-				edgeLabelGroup
-					.attr("x", (d) => {
-						const src = d.source as SimNode;
-						const tgt = d.target as SimNode;
-						return (
-							((src.x ?? 0) +
-								nodeWidth(src) / 2 +
-								(tgt.x ?? 0) +
-								nodeWidth(tgt) / 2) /
-							2
-						);
-					})
-					.attr("y", (d) => {
-						const src = d.source as SimNode;
-						const tgt = d.target as SimNode;
-						return (
-							((src.y ?? 0) +
-								nodeHeight(src) / 2 +
-								(tgt.y ?? 0) +
-								nodeHeight(tgt) / 2) /
-							2
-						);
-					});
+	onZoomIn(): void {
+		if (this.zoom && this.svgSelection) {
+			this.svgSelection.transition().duration(300).call(this.zoom.scaleBy, 1.3);
+		}
+	}
 
-				// Node positions (translate to top-left corner)
-				nodeGroup.attr(
-					"transform",
-					(d) => `translate(${d.x ?? 0},${d.y ?? 0})`,
-				);
-			});
+	onZoomOut(): void {
+		if (this.zoom && this.svgSelection) {
+			this.svgSelection.transition().duration(300).call(this.zoom.scaleBy, 0.7);
+		}
+	}
 
-		this.simulation = simulation;
+	onResetZoom(): void {
+		if (this.zoom && this.svgSelection) {
+			this.svgSelection.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+		}
+	}
+
+	onFullscreen(): void {
+		const el = this.containerRef().nativeElement;
+		if (document.fullscreenElement) {
+			document.exitFullscreen();
+		} else {
+			el.requestFullscreen();
+		}
 	}
 }

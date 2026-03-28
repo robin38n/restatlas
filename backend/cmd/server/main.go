@@ -30,7 +30,8 @@ func main() {
 	handler.HandlerFromMuxWithBaseURL(server, r, "/api")
 
 	// Extra routes not in the OpenAPI spec
-	r.Post("/api/demo", server.HandleDemoUpload)
+	r.Get("/api/demos", server.HandleDemoList)
+	r.Post("/api/demos/{slug}", server.HandleDemoUpload)
 
 	log.Println("Server starting on :3000")
 	if err := http.ListenAndServe(":3000", r); err != nil {

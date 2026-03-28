@@ -1,4 +1,4 @@
-import { Component, computed, inject, type OnInit } from "@angular/core";
+import { Component, computed, inject, signal, type OnInit } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import type {
 	EndpointNode,
@@ -6,9 +6,12 @@ import type {
 	SchemaNode,
 } from "../../models/graph.model";
 import { GraphCanvasComponent } from "./graph-canvas";
+import { GraphCanvasForceComponent } from "./graph-canvas-force";
 import { GraphToolbarComponent } from "./graph-toolbar";
 import { NodeDetailComponent } from "./node-detail";
 import { SpecGraphService } from "./spec-graph.service";
+
+type GraphLayout = "structured" | "interactive";
 
 @Component({
 	selector: "app-spec-viewer",
@@ -16,6 +19,7 @@ import { SpecGraphService } from "./spec-graph.service";
 	imports: [
 		RouterLink,
 		GraphCanvasComponent,
+		GraphCanvasForceComponent,
 		GraphToolbarComponent,
 		NodeDetailComponent,
 	],
@@ -40,10 +44,28 @@ import { SpecGraphService } from "./spec-graph.service";
           </div>
         </header>
 
-        <app-graph-toolbar />
+        <div class="toolbar-row">
+          <app-graph-toolbar />
+          <div class="layout-toggle">
+            <button
+              class="toggle-btn"
+              [class.active]="layout() === 'structured'"
+              (click)="layout.set('structured')"
+            >Structured</button>
+            <button
+              class="toggle-btn"
+              [class.active]="layout() === 'interactive'"
+              (click)="layout.set('interactive')"
+            >Interactive</button>
+          </div>
+        </div>
 
         @if (displayGraph(); as g) {
-          <app-graph-canvas [graph]="g" (nodeClick)="onNodeClick($event)" />
+          @if (layout() === 'structured') {
+            <app-graph-canvas [graph]="g" (nodeClick)="onNodeClick($event)" />
+          } @else {
+            <app-graph-canvas-force [graph]="g" (nodeClick)="onNodeClick($event)" />
+          }
 
           <div class="detail-card">
             <div class="list-pane">
@@ -221,11 +243,44 @@ import { SpecGraphService } from "./spec-graph.service";
       margin-top: 2rem;
       text-align: center;
     }
+    .toolbar-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .layout-toggle {
+      display: flex;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .toggle-btn {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border: none;
+      background: #fff;
+      color: #666;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-btn:not(:last-child) {
+      border-right: 1px solid #e5e7eb;
+    }
+    .toggle-btn.active {
+      background: #1e293b;
+      color: #fff;
+    }
+    .toggle-btn:hover:not(.active) {
+      background: #f3f4f6;
+    }
   `,
 })
 export class SpecViewerComponent implements OnInit {
 	protected readonly svc = inject(SpecGraphService);
 	private readonly route = inject(ActivatedRoute);
+	protected readonly layout = signal<GraphLayout>("interactive");
 
 	protected readonly displayGraph = computed(
 		() => this.svc.filteredGraph() ?? this.svc.graph(),

@@ -6,7 +6,7 @@ import {
 	viewChild,
 } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
-import { ApiService } from "../../api/api.service";
+import { ApiService, type DemoInfo } from "../../api/api.service";
 import type { components } from "../../api/schema";
 
 type SpecSummary = components["schemas"]["SpecSummary"];
@@ -34,9 +34,16 @@ const PLACEHOLDER_JSON = `{
 
       <div class="textarea-wrapper">
         <div class="textarea-toolbar">
-          <button class="use-example" (click)="loadDemo()" [disabled]="loading()">
-            Use example
-          </button>
+          @if (demos().length > 0) {
+            <select class="demo-select" (change)="selectedDemoSlug.set($any($event.target).value)">
+              @for (d of demos(); track d.slug) {
+                <option [value]="d.slug" [selected]="d.slug === selectedDemoSlug()">{{ d.title }}</option>
+              }
+            </select>
+            <button class="use-example" (click)="loadDemo()" [disabled]="loading() || !selectedDemoSlug()">
+              Load Example
+            </button>
+          }
         </div>
         <textarea
           #specInput
@@ -106,6 +113,14 @@ const PLACEHOLDER_JSON = `{
       padding: 0.375rem 0.5rem;
       background: #f9fafb;
       border-bottom: 1px solid #e5e7eb;
+    }
+    .demo-select {
+      font-size: 0.8rem;
+      padding: 0.125rem 0.375rem;
+      border: 1px solid #d1d5db;
+      border-radius: 3px;
+      background: #fff;
+      color: #374151;
     }
     .use-example {
       background: none;
@@ -218,8 +233,19 @@ export class UploadComponent {
 	loading = signal(false);
 	error = signal<string | null>(null);
 	summary = signal<SpecSummary | null>(null);
+	demos = signal<DemoInfo[]>([]);
+	selectedDemoSlug = signal("");
 
 	readonly placeholder = PLACEHOLDER_JSON;
+
+	constructor() {
+		this.api.listDemos().then(({ data }) => {
+			if (data && data.length > 0) {
+				this.demos.set(data);
+				this.selectedDemoSlug.set(data[0].slug);
+			}
+		});
+	}
 
 	async onFileSelect(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -238,12 +264,15 @@ export class UploadComponent {
 	}
 
 	async loadDemo() {
+		const slug = this.selectedDemoSlug();
+		if (!slug) return;
+
 		this.error.set(null);
 		this.summary.set(null);
 		this.loading.set(true);
 
 		try {
-			const { data, error } = await this.api.loadDemo();
+			const { data, error } = await this.api.loadDemo(slug);
 			if (error) {
 				this.error.set("Failed to load demo");
 			} else if (data) {

@@ -1,8 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -10,6 +15,8 @@ import (
 
 	"github.com/robin38n/restatlas/backend/internal/store"
 )
+
+var proxyClient = &http.Client{Timeout: 30 * time.Second}
 
 type Server struct {
 	store *store.SpecStore
@@ -138,8 +145,125 @@ func (s *Server) GetSpec(w http.ResponseWriter, r *http.Request, id openapi_type
 }
 
 func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "proxy not implemented yet"})
+	var req ProxyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+
+	if !req.Method.Valid() {
+		writeError(w, http.StatusBadRequest, "invalid HTTP method")
+		return
+	}
+
+	parsed, err := url.Parse(req.Url)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid URL: "+err.Error())
+		return
+	}
+
+	if isPrivateHost(parsed.Hostname()) {
+		writeError(w, http.StatusForbidden, "requests to private/internal addresses are not allowed")
+		return
+	}
+
+	// Build outgoing request body
+	var bodyReader io.Reader
+	if req.Body != nil {
+		bodyBytes, err := json.Marshal(req.Body)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "failed to encode request body")
+			return
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
+
+	outReq, err := http.NewRequestWithContext(r.Context(), string(req.Method), req.Url, bodyReader)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to create request: "+err.Error())
+		return
+	}
+
+	if req.Headers != nil {
+		for k, v := range *req.Headers {
+			outReq.Header.Set(k, v)
+		}
+	}
+	if outReq.Header.Get("User-Agent") == "" {
+		outReq.Header.Set("User-Agent", "RestAtlas/0.1")
+	}
+	if bodyReader != nil && outReq.Header.Get("Content-Type") == "" {
+		outReq.Header.Set("Content-Type", "application/json")
+	}
+
+	start := time.Now()
+	resp, err := proxyClient.Do(outReq)
+	durationMs := int(time.Since(start).Milliseconds())
+
+	if err != nil {
+		// Network error — return consistent shape with status 0
+		writeJSON(w, http.StatusOK, ProxyResponse{
+			Status:     0,
+			Headers:    map[string]string{},
+			Body:       "Network error: " + err.Error(),
+			DurationMs: &durationMs,
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read response body (capped at 5 MB)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 5*1024*1024))
+	if err != nil {
+		writeJSON(w, http.StatusOK, ProxyResponse{
+			Status:     resp.StatusCode,
+			Headers:    flattenHeaders(resp.Header),
+			Body:       "Error reading response body: " + err.Error(),
+			DurationMs: &durationMs,
+		})
+		return
+	}
+
+	// Try to parse as JSON for structured response
+	var parsedBody interface{}
+	if err := json.Unmarshal(respBody, &parsedBody); err != nil {
+		parsedBody = string(respBody)
+	}
+
+	writeJSON(w, http.StatusOK, ProxyResponse{
+		Status:     resp.StatusCode,
+		Headers:    flattenHeaders(resp.Header),
+		Body:       parsedBody,
+		DurationMs: &durationMs,
+	})
+}
+
+func flattenHeaders(h http.Header) map[string]string {
+	flat := make(map[string]string, len(h))
+	for k, vals := range h {
+		flat[k] = strings.Join(vals, ", ")
+	}
+	return flat
+}
+
+func isPrivateHost(host string) bool {
+	if host == "localhost" || host == "" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	privateRanges := []string{
+		"127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "::1/128",
+	}
+	for _, cidr := range privateRanges {
+		_, network, _ := net.ParseCIDR(cidr)
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
