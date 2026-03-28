@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: RestAtlas API
+  title: ReqViz API
   version: 0.1.0
-  description: Backend API for RestAtlas — Visual OpenAPI Explorer
+  description: Backend API for ReqViz — Visual OpenAPI Explorer
 
 servers:
   - url: http://localhost:3000/api
@@ -16,16 +16,6 @@ paths:
       requestBody:
         required: true
         content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                url:
-                  type: string
-                  format: uri
           application/json:
             schema:
               type: object
@@ -65,7 +55,7 @@ paths:
   /proxy:
     post:
       operationId: proxyRequest
-      summary: CORS proxy for Try-It-Out requests
+      summary: CORS proxy for API requests
       requestBody:
         required: true
         content:
@@ -79,6 +69,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProxyResponse'
+
+  /demos:
+    get:
+      operationId: listDemos
+      summary: List available demo API specs
+      responses:
+        '200':
+          description: Array of demo metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DemoInfo'
+
+  /demos/{slug}:
+    get:
+      operationId: getDemoSpec
+      summary: Get the raw OpenAPI spec for a demo
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Raw demo spec as JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /demos/{slug}/load:
+    post:
+      operationId: loadDemo
+      summary: Parse and store a demo spec, returning its summary
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Demo spec parsed and stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /health:
     get:
@@ -165,6 +210,17 @@ components:
           description: Response body (any type)
         durationMs:
           type: integer
+
+    DemoInfo:
+      type: object
+      required: [slug, title, description]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
 
     ValidationError:
       type: object

@@ -8,14 +8,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/robin38n/restatlas/backend/internal/handler"
-	"github.com/robin38n/restatlas/backend/internal/store"
+	"github.com/robin38n/reqviz/backend/internal/handler"
+	"github.com/robin38n/reqviz/backend/internal/store"
 )
 
 func main() {
 	r := chi.NewRouter()
 
-	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
@@ -24,15 +23,9 @@ func main() {
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 	}))
 
-	// Wire up generated routes under /api
 	specStore := store.New()
 	server := handler.NewServer(specStore)
 	handler.HandlerFromMuxWithBaseURL(server, r, "/api")
-
-	// Extra routes not in the OpenAPI spec
-	r.Get("/api/demos", server.HandleDemoList)
-	r.Get("/api/demos/{slug}", server.HandleDemoSpec)
-	r.Post("/api/demos/{slug}", server.HandleDemoUpload)
 
 	log.Println("Server starting on :3000")
 	if err := http.ListenAndServe(":3000", r); err != nil {

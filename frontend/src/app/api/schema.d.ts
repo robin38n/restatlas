@@ -47,8 +47,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** CORS proxy for Try-It-Out requests */
+        /** CORS proxy for API requests */
         post: operations["proxyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/demos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available demo API specs */
+        get: operations["listDemos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/demos/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the raw OpenAPI spec for a demo */
+        get: operations["getDemoSpec"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/demos/{slug}/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Parse and store a demo spec, returning its summary */
+        post: operations["loadDemo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -115,6 +166,11 @@ export interface components {
             body?: unknown;
             durationMs?: number;
         };
+        DemoInfo: {
+            slug: string;
+            title: string;
+            description: string;
+        };
         ValidationError: {
             error?: string;
             details?: {
@@ -161,12 +217,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file?: string;
-                    /** Format: uri */
-                    url?: string;
-                };
                 "application/json": {
                     [key: string]: unknown;
                 };
@@ -230,6 +280,74 @@ export interface operations {
                     "application/json": components["schemas"]["ProxyResponse"];
                 };
             };
+        };
+    };
+    listDemos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of demo metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoInfo"][];
+                };
+            };
+        };
+    };
+    getDemoSpec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Raw demo spec as JSON */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    loadDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Demo spec parsed and stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpecSummary"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     healthCheck: {

@@ -4,12 +4,6 @@ import type { components, paths } from "./schema";
 
 type ProxyRequestBody = components["schemas"]["ProxyRequest"];
 
-export interface DemoInfo {
-	slug: string;
-	title: string;
-	description: string;
-}
-
 @Injectable({ providedIn: "root" })
 export class ApiService {
 	private readonly client = createClient<paths>({ baseUrl: "/api" });
@@ -32,35 +26,19 @@ export class ApiService {
 		return this.client.POST("/proxy", { body });
 	}
 
-	async getDemoSpec(slug: string): Promise<Record<string, unknown> | null> {
-		const res = await fetch(`/api/demos/${encodeURIComponent(slug)}`);
-		if (!res.ok) return null;
-		return res.json();
+	listDemos() {
+		return this.client.GET("/demos");
 	}
 
-	async listDemos(): Promise<{
-		data?: DemoInfo[];
-		error?: unknown;
-	}> {
-		const res = await fetch("/api/demos");
-		if (!res.ok) return { error: await res.json() };
-		return { data: await res.json() };
-	}
-
-	async loadDemo(slug: string): Promise<{
-		data?: {
-			id: string;
-			title: string;
-			version: string;
-			endpointCount: number;
-			schemaCount: number;
-		};
-		error?: unknown;
-	}> {
-		const res = await fetch(`/api/demos/${encodeURIComponent(slug)}`, {
-			method: "POST",
+	getDemoSpec(slug: string) {
+		return this.client.GET("/demos/{slug}", {
+			params: { path: { slug } },
 		});
-		if (!res.ok) return { error: await res.json() };
-		return { data: await res.json() };
+	}
+
+	loadDemo(slug: string) {
+		return this.client.POST("/demos/{slug}/load", {
+			params: { path: { slug } },
+		});
 	}
 }

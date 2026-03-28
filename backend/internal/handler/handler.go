@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -13,11 +14,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/robin38n/restatlas/backend/internal/store"
+	"github.com/robin38n/reqviz/backend/internal/store"
 )
 
 var proxyClient = &http.Client{Timeout: 30 * time.Second}
 
+// Server implements the generated ServerInterface.
 type Server struct {
 	store *store.SpecStore
 }
@@ -26,103 +28,31 @@ func NewServer(s *store.SpecStore) *Server {
 	return &Server{store: s}
 }
 
-func (s *Server) HealthCheck(w http.ResponseWriter, r *http.Request) {
+// HealthCheck returns a simple status response.
+func (s *Server) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// UploadSpec accepts a raw OpenAPI spec as JSON, validates it,
+// extracts metadata, stores it, and returns a SpecSummary.
 func (s *Server) UploadSpec(w http.ResponseWriter, r *http.Request) {
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
-	// Re-marshal to bytes for kin-openapi validation
-	rawBytes, err := json.Marshal(raw)
+	summary, err := s.parseAndStoreSpec(raw)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to process spec")
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	loader := openapi3.NewLoader()
-	doc, err := loader.LoadFromData(rawBytes)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid OpenAPI spec: "+err.Error())
-		return
-	}
-
-	// Extract metadata
-	title := "Untitled"
-	version := "unknown"
-	if doc.Info != nil {
-		if doc.Info.Title != "" {
-			title = doc.Info.Title
-		}
-		if doc.Info.Version != "" {
-			version = doc.Info.Version
-		}
-	}
-
-	endpointCount := 0
-	if doc.Paths != nil {
-		for _, pathItem := range doc.Paths.Map() {
-			if pathItem.Get != nil {
-				endpointCount++
-			}
-			if pathItem.Post != nil {
-				endpointCount++
-			}
-			if pathItem.Put != nil {
-				endpointCount++
-			}
-			if pathItem.Patch != nil {
-				endpointCount++
-			}
-			if pathItem.Delete != nil {
-				endpointCount++
-			}
-			if pathItem.Head != nil {
-				endpointCount++
-			}
-			if pathItem.Options != nil {
-				endpointCount++
-			}
-		}
-	}
-
-	schemaCount := 0
-	if doc.Components != nil {
-		schemaCount = len(doc.Components.Schemas)
-	}
-
-	var tags []string
-	for _, tag := range doc.Tags {
-		tags = append(tags, tag.Name)
-	}
-
-	stored := &store.StoredSpec{
-		Title:         title,
-		Version:       version,
-		EndpointCount: endpointCount,
-		SchemaCount:   schemaCount,
-		Tags:          tags,
-		Raw:           raw,
-	}
-	id := s.store.Save(stored)
-
-	now := time.Now()
-	writeJSON(w, http.StatusCreated, SpecSummary{
-		Id:            openapi_types.UUID(id),
-		Title:         title,
-		Version:       version,
-		EndpointCount: endpointCount,
-		SchemaCount:   schemaCount,
-		Tags:          &tags,
-		CreatedAt:     &now,
-	})
+	writeJSON(w, http.StatusCreated, summary)
 }
 
-func (s *Server) GetSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+// GetSpec retrieves a previously stored spec by ID.
+func (s *Server) GetSpec(w http.ResponseWriter, _ *http.Request, id openapi_types.UUID) {
 	stored, err := s.store.Get(id)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, NotFound{strPtr("spec not found")})
@@ -144,6 +74,8 @@ func (s *Server) GetSpec(w http.ResponseWriter, r *http.Request, id openapi_type
 	})
 }
 
+// ProxyRequest forwards an HTTP request to an external API and returns
+// the response. It blocks requests to private/internal IP ranges.
 func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	var req ProxyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -167,7 +99,6 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build outgoing request body
 	var bodyReader io.Reader
 	if req.Body != nil {
 		bodyBytes, err := json.Marshal(req.Body)
@@ -190,7 +121,7 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if outReq.Header.Get("User-Agent") == "" {
-		outReq.Header.Set("User-Agent", "RestAtlas/0.1")
+		outReq.Header.Set("User-Agent", "ReqViz/0.1")
 	}
 	if bodyReader != nil && outReq.Header.Get("Content-Type") == "" {
 		outReq.Header.Set("Content-Type", "application/json")
@@ -201,7 +132,6 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	durationMs := int(time.Since(start).Milliseconds())
 
 	if err != nil {
-		// Network error — return consistent shape with status 0
 		writeJSON(w, http.StatusOK, ProxyResponse{
 			Status:     0,
 			Headers:    map[string]string{},
@@ -212,7 +142,6 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Read response body (capped at 5 MB)
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 5*1024*1024))
 	if err != nil {
 		writeJSON(w, http.StatusOK, ProxyResponse{
@@ -224,8 +153,7 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Try to parse as JSON for structured response
-	var parsedBody interface{}
+	var parsedBody any
 	if err := json.Unmarshal(respBody, &parsedBody); err != nil {
 		parsedBody = string(respBody)
 	}
@@ -236,6 +164,84 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		Body:       parsedBody,
 		DurationMs: &durationMs,
 	})
+}
+
+// parseAndStoreSpec validates a raw OpenAPI spec, extracts metadata,
+// stores it, and returns a SpecSummary. This is the single shared
+// pipeline used by both UploadSpec and LoadDemo.
+func (s *Server) parseAndStoreSpec(raw map[string]any) (*SpecSummary, error) {
+	rawBytes, err := json.Marshal(raw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process spec")
+	}
+
+	doc, err := openapi3.NewLoader().LoadFromData(rawBytes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid OpenAPI spec: %w", err)
+	}
+
+	title := "Untitled"
+	version := "unknown"
+	if doc.Info != nil {
+		if doc.Info.Title != "" {
+			title = doc.Info.Title
+		}
+		if doc.Info.Version != "" {
+			version = doc.Info.Version
+		}
+	}
+
+	endpointCount := countEndpoints(doc)
+
+	schemaCount := 0
+	if doc.Components != nil {
+		schemaCount = len(doc.Components.Schemas)
+	}
+
+	var tags []string
+	for _, tag := range doc.Tags {
+		tags = append(tags, tag.Name)
+	}
+
+	stored := &store.StoredSpec{
+		Title:         title,
+		Version:       version,
+		EndpointCount: endpointCount,
+		SchemaCount:   schemaCount,
+		Tags:          tags,
+		Raw:           raw,
+	}
+	id := s.store.Save(stored)
+
+	now := time.Now()
+	return &SpecSummary{
+		Id:            openapi_types.UUID(id),
+		Title:         title,
+		Version:       version,
+		EndpointCount: endpointCount,
+		SchemaCount:   schemaCount,
+		Tags:          &tags,
+		CreatedAt:     &now,
+	}, nil
+}
+
+// countEndpoints counts all HTTP operations across all paths.
+func countEndpoints(doc *openapi3.T) int {
+	if doc.Paths == nil {
+		return 0
+	}
+	count := 0
+	for _, item := range doc.Paths.Map() {
+		for _, op := range []*openapi3.Operation{
+			item.Get, item.Post, item.Put, item.Patch,
+			item.Delete, item.Head, item.Options,
+		} {
+			if op != nil {
+				count++
+			}
+		}
+	}
+	return count
 }
 
 func flattenHeaders(h http.Header) map[string]string {
@@ -266,7 +272,7 @@ func isPrivateHost(host string) bool {
 	return false
 }
 
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)

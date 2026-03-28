@@ -10,5 +10,12 @@ export const routes: Routes = [
 				(m) => m.SpecViewerComponent,
 			),
 	},
+	{
+		path: "api-client",
+		loadComponent: () =>
+			import("./features/api-client/api-client").then(
+				(m) => m.ApiClientComponent,
+			),
+	},
 	{ path: "**", redirectTo: "" },
 ];

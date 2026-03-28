@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, type Signal } from "@angular/core";
+import { Router } from "@angular/router";
 import type { EndpointNode, SchemaNode } from "../../models/graph.model";
 import { SpecGraphService } from "./spec-graph.service";
 import { TryItOutComponent } from "./try-it-out";
@@ -112,6 +113,7 @@ function asRecord(v: unknown): Record<string, unknown> | null {
 
           <div [hidden]="activeTab() !== 'try-it'">
             <app-try-it-out />
+            <button class="open-client-btn" (click)="openInApiClient()">Open in API Client &rarr;</button>
           </div>
         }
 
@@ -369,9 +371,27 @@ function asRecord(v: unknown): Record<string, unknown> | null {
     .tab-btn:hover:not(.active) {
       background: #f3f4f6;
     }
+    .open-client-btn {
+      display: block;
+      margin-top: 0.75rem;
+      padding: 0.35rem 0.75rem;
+      background: none;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      color: #6b7280;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .open-client-btn:hover {
+      border-color: #9ca3af;
+      color: #374151;
+      background: #f9fafb;
+    }
   `,
 })
 export class NodeDetailComponent {
+	private readonly router = inject(Router);
 	protected readonly svc = inject(SpecGraphService);
 	readonly activeTab = signal<"details" | "try-it">("details");
 
@@ -508,6 +528,26 @@ export class NodeDetailComponent {
 			};
 		});
 	});
+
+	private readonly baseUrl = computed(() => {
+		const raw = this.svc.rawSpec();
+		const servers = dig(raw, "servers");
+		if (!Array.isArray(servers) || servers.length === 0) return "";
+		const first = asRecord(servers[0]);
+		return first ? String(first["url"] ?? "") : "";
+	});
+
+	openInApiClient(): void {
+		const node = this.svc.selectedNode();
+		if (!node || node.type !== "endpoint") return;
+		const ep = node as EndpointNode;
+		this.router.navigate(["/api-client"], {
+			state: {
+				method: ep.method,
+				url: `${this.baseUrl()}${ep.path}`,
+			},
+		});
+	}
 
 	asEndpoint(node: unknown): EndpointNode {
 		return node as EndpointNode;

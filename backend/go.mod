@@ -1,4 +1,4 @@
-module github.com/robin38n/restatlas/backend
+module github.com/robin38n/reqviz/backend
 
 go 1.26.1
 

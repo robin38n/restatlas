@@ -53,6 +53,13 @@ func (e ProxyRequestMethod) Valid() bool {
 	}
 }
 
+// DemoInfo defines model for DemoInfo.
+type DemoInfo struct {
+	Description string `json:"description"`
+	Slug        string `json:"slug"`
+	Title       string `json:"title"`
+}
+
 // ParsedSpec defines model for ParsedSpec.
 type ParsedSpec struct {
 	Id openapi_types.UUID `json:"id"`
@@ -111,27 +118,27 @@ type NotFound struct {
 // UploadSpecJSONBody defines parameters for UploadSpec.
 type UploadSpecJSONBody map[string]interface{}
 
-// UploadSpecMultipartBody defines parameters for UploadSpec.
-type UploadSpecMultipartBody struct {
-	File *openapi_types.File `json:"file,omitempty"`
-	Url  *string             `json:"url,omitempty"`
-}
-
 // ProxyRequestJSONRequestBody defines body for ProxyRequest for application/json ContentType.
 type ProxyRequestJSONRequestBody = ProxyRequest
 
 // UploadSpecJSONRequestBody defines body for UploadSpec for application/json ContentType.
 type UploadSpecJSONRequestBody UploadSpecJSONBody
 
-// UploadSpecMultipartRequestBody defines body for UploadSpec for multipart/form-data ContentType.
-type UploadSpecMultipartRequestBody UploadSpecMultipartBody
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List available demo API specs
+	// (GET /demos)
+	ListDemos(w http.ResponseWriter, r *http.Request)
+	// Get the raw OpenAPI spec for a demo
+	// (GET /demos/{slug})
+	GetDemoSpec(w http.ResponseWriter, r *http.Request, slug string)
+	// Parse and store a demo spec, returning its summary
+	// (POST /demos/{slug}/load)
+	LoadDemo(w http.ResponseWriter, r *http.Request, slug string)
 
 	// (GET /health)
 	HealthCheck(w http.ResponseWriter, r *http.Request)
-	// CORS proxy for Try-It-Out requests
+	// CORS proxy for API requests
 	// (POST /proxy)
 	ProxyRequest(w http.ResponseWriter, r *http.Request)
 	// Upload an OpenAPI specification
@@ -146,12 +153,30 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
+// List available demo API specs
+// (GET /demos)
+func (_ Unimplemented) ListDemos(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the raw OpenAPI spec for a demo
+// (GET /demos/{slug})
+func (_ Unimplemented) GetDemoSpec(w http.ResponseWriter, r *http.Request, slug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Parse and store a demo spec, returning its summary
+// (POST /demos/{slug}/load)
+func (_ Unimplemented) LoadDemo(w http.ResponseWriter, r *http.Request, slug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (GET /health)
 func (_ Unimplemented) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// CORS proxy for Try-It-Out requests
+// CORS proxy for API requests
 // (POST /proxy)
 func (_ Unimplemented) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -177,6 +202,70 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListDemos operation middleware
+func (siw *ServerInterfaceWrapper) ListDemos(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDemos(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDemoSpec operation middleware
+func (siw *ServerInterfaceWrapper) GetDemoSpec(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", chi.URLParam(r, "slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDemoSpec(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LoadDemo operation middleware
+func (siw *ServerInterfaceWrapper) LoadDemo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", chi.URLParam(r, "slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LoadDemo(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // HealthCheck operation middleware
 func (siw *ServerInterfaceWrapper) HealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -359,6 +448,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/demos", wrapper.ListDemos)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/demos/{slug}", wrapper.GetDemoSpec)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/demos/{slug}/load", wrapper.LoadDemo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/health", wrapper.HealthCheck)
 	})
 	r.Group(func(r chi.Router) {
@@ -377,24 +475,26 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7SXzXLbNhCAXwWz7aGdoU2lzok3xVZsd1JLYym5ZHyAiZWImAQQYGlHo+FMH6JP2Cfp",
-	"AKQtUqRltXYvCUQu9+fbP3gDqS6MVqjIQbIBi85o5TD8uNL0UZdK+HOqFaEif+TG5DLlJLWKvzmt/DOX",
-	"ZlhwfzJWG7QkaxVorbb+QGuDkIAjK9UKqip6fKJvv2FKUPlHAl1qpfGaIYFrdLq0KTKliS2DI1UEX3gu",
-	"RTA+edR9sG8/W1xCAj/F26Dj+q2Ld/UOOLQVYUsucxQhjkaB1z/j1qGYG0z7JGTAuNS24AQJlKUUEO1i",
-	"icDyhxCHENIb4vmspYVsibtOTa1cScVzNjWoxrNL5gymjDv2+3x6BT3MEbiyKLhdv8TDRzFvRH2YFr+X",
-	"0qKA5CsE172nW203A5ZmVv9YX+P3Eh31gdxqEZzYTXoQZ/4t+4WrNfNqf/XqMuQCrXsez6aPs+dTgZTp",
-	"kApUZeGDOZ8sIILZdB7++xz+HS9OLyCCs8mnyWICEVxMxmcQwXS2uJxezVvBbi2VNu8m2Mp+fnc4Ns7U",
-	"H+8hWPfk4Qhr+SGGorShgP9o45KKcIX2zRg74lQOGtiJvxHcmh1i0C7EHoHUIicUY+qwF5zwiGSBQx2G",
-	"ShgtFZ3qsp4ZfQoH9mrdKnv0EF/VvU9Y7GXHreXr8FtSjoOS92idrAfa/qKqfQ16tl/tht11fgj7wJzt",
-	"ohdIXObd+LoSS4m5GAymQOf4Cg9aDH1I/26pSLXU/Sb5wNM7VIL5ibnUll2jozHl3LG///yLfZGubI3U",
-	"yQ+Ta4v2CWxoskZ+PLtsgU5gdPzueOTd1AYVNxISODkeHZ9ABIZTFsjEGfKcMn9cYSgezy3QvhSQwEV4",
-	"fZpheucnbXsp/zYavWIfb1vzcfzpu4Fxdsh6nqO9lyky6Vgdjd8TXiw2fmoF29oNBNdZC3XtoqMPzSx7",
-	"k2XeMVF1O8Qv0eqVUA+w3czsAXBeQKJgdivT2spwOr2es4AwFObCro8u6WhaEmtIufBB7Pe8e57yZ5Nr",
-	"Xt9F/jvjw68h1/zhwBuIb/8yJ2m4pdjP2CPBie8r2qWsZ+LTQL6VyrN6xRYeqO6XKuTdm1VI92rVbyyP",
-	"rwzpQ8G4EsyEe6WP731dqEPan9wduMq266suDMZVJ19y2cTSKq54I0X17Iw6R2qqy3DLC6Rwb/i6AemD",
-	"8KMOIlC8CDtRwC7gqAXrhU1b3fyf7bq9sw/k4mOZ53U9P0jKmkSwAomHog0Zef9yRp7+kuqm4hyJceZI",
-	"WxS9LHhJtPePVLt+fdIpz9kZ3mOuTYFho4fah4zIJHGce4FMO0pORqNR7PdQdVP9EwAA//8Jr5pv7w0A",
-	"AA==",
+	"H4sIAAAAAAAC/7yXwXLbNhCGXwWD9tDOsKbS5KSbYim2O66lsRxfMj6siZWImARoYGlH9WimD9En7JN0",
+	"AFCiKFKyUnlySWhxCex+i/138cITnRdaoSLL+y/coC20suj/uNL0SZdKuOdEK0JF7hGKIpMJkNQq/mq1",
+	"cr/ZJMUc3FNhdIGGZFgCjdHGPdCiQN7nloxUc75cRqtf9P1XTIgv3U8CbWJk4VbmfX6NVpcmQaY0sZl3",
+	"ZBnxW8ik8JuPVmsf7NvPBme8z3+K66Dj8NbG2+t2OFSbsBnIDIWPo1rArT/EXF+omW5zaCzUohFxm5Xz",
+	"zhckKcNugAYfS2lQ8P6X8P3Kuun3XQt1xCdgLIppgUnbVenzPdMmB+J9XpZS8KjtmIFnD1wI6baBbLKx",
+	"CpkSt+mNjZxLBRkbF6gGkwtmC0wYWPbHdHzFO5y0ZZ6DWbyWOBfFtDLdxuJdd57Wq3XiMPrb4hofS7TU",
+	"BnKvxaKVQ16ZM/eW/QJqwdyyv7rlUgSBxu7G05XnbZ9ypFT7VKAqcxfM2eiGR3wynvr/Pvt/Bzen5zzi",
+	"w9Hl6GbEI34+Ggx5xMeTm4vx1XQj2Hqn0mTNBBvZzu8Wx8qZ8PEegkE8DkcY7LsYitL4SvtzE5dUhHM0",
+	"b8bYElDZucF2eQXDetsuBpsHsUUgMQiEYkAN9gIIfyOZY1eFoRKFlopOdRnErU3hwFoNpbJnHYJ5qH3C",
+	"fC87MAYW+3Qp4k9obLfMdRXnSrFWX22H3XS+C3tHQ9jWXgKZNeNrWswkZqIzmBythTke1MHakL6v+8mq",
+	"czSL5CMkD6gEc4o504Zd4+Ot/Iv9+/c/7FbackNPR9+KTBs0a6pepJzxYHKxgbjPeyfvTnrOQV2ggkLy",
+	"Pn9/0jt5zyNeAKWeSSww1/5pjv7UOGAe84XgfX4pLQ29RdQcGn7v9b6rJ69Tsk/j1421BbndpQfuBdMz",
+	"5gJgORIIIAitelWd3n0GTyAzuM8wmK56kvW2If74xXXW5U4MZ+gp+E7q4BnIkbwufXnh0rnjgPKIK8j9",
+	"CQh9ui6D0ClrHNsn5e5IvPv68+sTGDwHNI1WvYz4h96HXSlbexuvx8cm+jMkRikyA8/NUcCdbvD7tRMQ",
+	"Zxp8hRbadp1GDcLl4Ufl4N2bjZ3N6aWVgeGafuFHNgZKMEva+X1kHvwMWK9XofebRcwglUZJNWeSLLMb",
+	"41WcImSU7qyIc//6NMXk4VhpaIp03axXA5F+6BhwDrlZTNE8yQSZtCxE49m74Ao3x+w+Z41BMRwhtPSx",
+	"mm7e5EA0tlg2e6Y7qMsjoR6wdzXFdYBzBhIFM7XN5pE6HV9PmUfoi9lVdoWo0tQgrzvxfi5cmVdi+n/h",
+	"Hn4jud5WoJ2XkUPS8MM0wb1mpUdVCULQhiAIvdcFoX3V3UxiSAID1WAjZ1UsG4mMX6TY2xoPbovhnrZT",
+	"kF8ZcI9ukntror4qd+TiU5ll4ew8S0pXIl0PHce3SqjkvpUFZ4nmaUW16delTiBjQ3zCTBc5+kHaX/x4",
+	"SlT04zhzBqm21H/f6/ViNwQu75b/BQAA//86+k1xDxIAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

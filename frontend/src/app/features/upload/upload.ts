@@ -6,10 +6,11 @@ import {
 	viewChild,
 } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
-import { ApiService, type DemoInfo } from "../../api/api.service";
+import { ApiService } from "../../api/api.service";
 import type { components } from "../../api/schema";
 
 type SpecSummary = components["schemas"]["SpecSummary"];
+type DemoInfo = components["schemas"]["DemoInfo"];
 
 const PLACEHOLDER_JSON = `{
   "openapi": "3.0.3",
@@ -266,9 +267,9 @@ export class UploadComponent {
 		this.loadingDemo.set(true);
 
 		try {
-			const spec = await this.api.getDemoSpec(slug);
-			if (spec) {
-				const text = JSON.stringify(spec, null, 2);
+			const { data } = await this.api.getDemoSpec(slug);
+			if (data) {
+				const text = JSON.stringify(data, null, 2);
 				this.specInput().nativeElement.value = text;
 				this.autoResize();
 			}
