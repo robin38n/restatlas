@@ -1,0 +1,93 @@
+<div class="max-w-[1200px] mx-auto mt-8 px-4">
+	@if (svc.loading()) {
+		<p class="text-gray-500">Loading spec...</p>
+	}
+
+	@if (svc.error(); as err) {
+		<div class="p-6 bg-red-50 text-red-600 rounded text-center">
+			<p class="mb-4">{{ err }}</p>
+			<a routerLink="/" class="inline-block py-2 px-4 bg-gray-800 text-white rounded no-underline text-sm hover:bg-gray-600">Return to start</a>
+		</div>
+	}
+
+	@if (svc.summary(); as s) {
+		<header>
+			<h1 class="mt-2 mb-0 text-2xl font-bold">{{ s.title }} <span class="text-gray-500 text-sm font-normal">v{{ s.version }}</span></h1>
+			<div class="flex gap-4 mt-2 mb-4">
+				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.endpointNodes().length }} endpoints</span>
+				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.schemaNodes().length }} schemas</span>
+				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.edgeCount() }} relationships</span>
+			</div>
+		</header>
+
+		<div class="flex items-start justify-between gap-4">
+			<app-graph-toolbar />
+			<div class="flex border border-gray-200 rounded-md overflow-hidden shrink-0">
+				<button
+					class="py-1.5 px-3 text-[0.8rem] border-none cursor-pointer transition-colors"
+					[class]="layout() === 'structured' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
+					(click)="layout.set('structured')"
+				>Structured</button>
+				<button
+					class="py-1.5 px-3 text-[0.8rem] border-none border-l border-gray-200 cursor-pointer transition-colors"
+					[class]="layout() === 'interactive' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
+					(click)="layout.set('interactive')"
+				>Interactive</button>
+			</div>
+		</div>
+
+		@if (displayGraph(); as g) {
+			@if (layout() === 'structured') {
+				<app-graph-canvas [graph]="g" (nodeClick)="onNodeClick($event)" />
+			} @else {
+				<app-graph-canvas-force [graph]="g" (nodeClick)="onNodeClick($event)" />
+			}
+
+			<div class="grid grid-cols-2 border border-gray-200 rounded-lg mt-6 overflow-hidden bg-white">
+				<!-- List pane -->
+				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-gray-200">
+					<section>
+						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Endpoints</h2>
+						@for (ep of filteredEndpoints(); track ep.id) {
+							<div
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100"
+								[class.bg-blue-50]="svc.selectedNodeId() === ep.id"
+								(click)="onNodeClick(ep)"
+							>
+								<app-method-badge [method]="ep.method" />
+								<span class="font-mono text-[0.8rem]">{{ ep.path }}</span>
+							</div>
+						} @empty {
+							<p class="text-gray-400 text-sm">No endpoints found</p>
+						}
+					</section>
+
+					<section class="mt-4">
+						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Schemas</h2>
+						@for (sc of filteredSchemas(); track sc.id) {
+							<div
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100"
+								[class.bg-blue-50]="svc.selectedNodeId() === sc.id"
+								(click)="onNodeClick(sc)"
+							>
+								<strong>{{ sc.name }}</strong>
+								<span class="ml-auto text-gray-400 text-xs">{{ sc.properties.length }} props</span>
+							</div>
+						} @empty {
+							<p class="text-gray-400 text-sm">No schemas found</p>
+						}
+					</section>
+				</div>
+
+				<!-- Detail pane -->
+				<div class="p-4 overflow-y-auto max-h-[600px]">
+					@if (svc.selectedNode()) {
+						<app-node-detail />
+					} @else {
+						<p class="text-gray-400 text-sm mt-8 text-center">Select an endpoint or schema to see details</p>
+					}
+				</div>
+			</div>
+		}
+	}
+</div>

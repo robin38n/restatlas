@@ -1,5 +1,5 @@
 export interface EndpointNode {
-	readonly id: string; // e.g. "GET /pets"
+	readonly id: string;
 	readonly type: "endpoint";
 	readonly path: string;
 	readonly method: string;
@@ -9,7 +9,7 @@ export interface EndpointNode {
 }
 
 export interface SchemaNode {
-	readonly id: string; // e.g. "schema:Pet"
+	readonly id: string;
 	readonly type: "schema";
 	readonly name: string;
 	readonly properties: string[];

@@ -1,0 +1,11 @@
+@if (svc.selectedNode(); as node) {
+	<aside class="text-sm">
+		@if (node.type === 'endpoint') {
+			<app-endpoint-detail />
+		}
+
+		@if (node.type === 'schema') {
+			<app-schema-detail />
+		}
+	</aside>
+}

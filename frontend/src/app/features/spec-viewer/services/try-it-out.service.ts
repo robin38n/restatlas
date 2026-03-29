@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
-import { ApiService } from "../../api/api.service";
+import { ApiService } from "../../../core/api.service";
 
 export interface HistoryEntry {
 	id: number;

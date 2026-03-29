@@ -1,0 +1,121 @@
+@if (depth() > 3) {
+	<textarea
+		class="w-full p-2 border border-gray-300 rounded font-mono text-[0.8rem] box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+		placeholder="JSON value..."
+		rows="3"
+		(input)="onRawInput($event)"
+	></textarea>
+} @else {
+	@for (field of fields(); track field.name) {
+		<div class="mb-2">
+			<label class="block text-xs font-semibold text-gray-700 mb-0.5">
+				{{ field.name }}
+				@if (field.required) { <span class="text-red-600">*</span> }
+				<span class="text-gray-400 font-normal ml-1">{{ field.type }}</span>
+			</label>
+
+			@switch (field.type) {
+				@case ('string') {
+					<input
+						class="w-full py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						[type]="inputType(field.format)"
+						[placeholder]="field.format || field.name"
+						[value]="getFieldValue(field.name)"
+						(input)="updateField(field.name, $event)"
+					/>
+				}
+				@case ('integer') {
+					<input
+						class="w-full py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						type="number"
+						step="1"
+						[placeholder]="field.name"
+						[value]="getFieldValue(field.name)"
+						(input)="updateFieldNumber(field.name, $event)"
+					/>
+				}
+				@case ('number') {
+					<input
+						class="w-full py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						type="number"
+						[placeholder]="field.name"
+						[value]="getFieldValue(field.name)"
+						(input)="updateFieldNumber(field.name, $event)"
+					/>
+				}
+				@case ('boolean') {
+					<select
+						class="w-full py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						(change)="updateFieldBoolean(field.name, $event)"
+					>
+						<option value="">--</option>
+						<option value="true">true</option>
+						<option value="false">false</option>
+					</select>
+				}
+				@case ('enum') {
+					<select
+						class="w-full py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						(change)="updateField(field.name, $event)"
+					>
+						<option value="">--</option>
+						@for (v of field.enumValues; track v) {
+							<option [value]="v">{{ v }}</option>
+						}
+					</select>
+				}
+				@case ('object') {
+					<div class="ml-3 pl-3 border-l-2 border-gray-200">
+						<app-schema-form
+							[schema]="field.schema"
+							[allSchemas]="allSchemas()"
+							[depth]="depth() + 1"
+							[value]="getNestedValue(field.name)"
+							(valueChange)="updateNestedField(field.name, $event)"
+						/>
+					</div>
+				}
+				@case ('array') {
+					<div class="ml-1">
+						<button
+							class="bg-transparent border border-dashed border-gray-300 text-blue-600 cursor-pointer py-1 px-2 rounded text-xs mb-1.5 w-full hover:bg-blue-50"
+							(click)="addArrayItem(field.name, field.schema)"
+						>+ Add item</button>
+						@for (item of getArrayItems(field.name); track $index) {
+							<div class="flex items-start gap-1.5 mb-1">
+								<span class="text-[0.7rem] text-gray-400 font-mono pt-1.5 shrink-0">[{{ $index }}]</span>
+								@if (isObjectArray(field.schema)) {
+									<app-schema-form
+										[schema]="getArrayItemSchema(field.schema)"
+										[allSchemas]="allSchemas()"
+										[depth]="depth() + 1"
+										[value]="asRecord(item) ?? {}"
+										(valueChange)="updateArrayItem(field.name, $index, $event)"
+									/>
+								} @else {
+									<input
+										class="flex-1 py-1.5 px-2 border border-gray-300 rounded font-mono text-[0.8rem] bg-white box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+										[value]="item ?? ''"
+										(input)="updateArrayItemPrimitive(field.name, $index, $event)"
+									/>
+								}
+								<button
+									class="bg-transparent border-none text-red-600 cursor-pointer text-[0.8rem] p-1 shrink-0"
+									(click)="removeArrayItem(field.name, $index)"
+								>x</button>
+							</div>
+						}
+					</div>
+				}
+				@default {
+					<textarea
+						class="w-full p-2 border border-gray-300 rounded font-mono text-[0.8rem] box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+						placeholder="JSON value..."
+						rows="2"
+						(input)="onRawFieldInput(field.name, $event)"
+					></textarea>
+				}
+			}
+		</div>
+	}
+}

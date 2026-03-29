@@ -15,9 +15,16 @@ import type {
 	GraphNode,
 	SchemaNode,
 	SpecGraph,
-} from "../../models/graph.model";
-import { GraphControlsComponent } from "./graph-controls";
-import { GraphLegendComponent } from "./graph-legend";
+} from "../../../models/graph.model";
+import { METHOD_COLORS } from "../../../shared/constants/method-colors";
+import {
+	EDGE_COLORS,
+	EDGE_DASH,
+	SCHEMA_FILL,
+	SCHEMA_STROKE,
+} from "../../../shared/constants/edge-styles";
+import { GraphControlsComponent } from "./graph-controls.component";
+import { GraphLegendComponent } from "./graph-legend.component";
 
 /** Mutable copy of GraphNode for D3 force simulation (adds x, y, vx, vy). */
 interface SimNode extends d3.SimulationNodeDatum {
@@ -37,37 +44,6 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
 	label?: string;
 }
 
-const METHOD_COLORS: Record<string, string> = {
-	GET: "#16a34a",
-	POST: "#2563eb",
-	PUT: "#d97706",
-	PATCH: "#9333ea",
-	DELETE: "#dc2626",
-	HEAD: "#6b7280",
-	OPTIONS: "#6b7280",
-};
-
-const EDGE_COLORS: Record<EdgeKind, string> = {
-	requestBody: "#2563eb",
-	response: "#16a34a",
-	parameter: "#d97706",
-	property: "#6b7280",
-	arrayItem: "#9333ea",
-	composition: "#dc2626",
-};
-
-const EDGE_DASH: Record<EdgeKind, string> = {
-	requestBody: "none",
-	response: "none",
-	parameter: "4 2",
-	property: "none",
-	arrayItem: "6 3",
-	composition: "2 2",
-};
-
-const SCHEMA_FILL = "#f8fafc";
-const SCHEMA_STROKE = "#64748b";
-
 function nodeWidth(node: SimNode): number {
 	return node.width;
 }
@@ -78,50 +54,10 @@ function nodeHeight(node: SimNode): number {
 
 @Component({
 	selector: "app-graph-canvas-force",
-	standalone: true,
 	imports: [GraphControlsComponent, GraphLegendComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	template: `<div class="graph-container" #container>
-		<svg #svg></svg>
-		<app-graph-legend />
-		<app-graph-controls
-			(zoomIn)="onZoomIn()"
-			(zoomOut)="onZoomOut()"
-			(resetZoom)="onResetZoom()"
-			(fullscreen)="onFullscreen()"
-		/>
-		@if (graph().nodes.length === 0) {
-			<div class="empty-state">
-				<p>No nodes match the current filters</p>
-			</div>
-		}
-	</div>`,
-	styles: `
-		.graph-container {
-			width: 100%;
-			height: 500px;
-			border: 1px solid #e5e7eb;
-			border-radius: 6px;
-			overflow: hidden;
-			background: #fafafa;
-			position: relative;
-		}
-		svg {
-			width: 100%;
-			height: 100%;
-		}
-		.empty-state {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-		.empty-state p {
-			color: #999;
-			font-size: 0.9rem;
-		}
-	`,
+	templateUrl: "./graph-canvas-force.component.html",
+	styleUrl: "./graph-canvas-force.component.css",
 })
 export class GraphCanvasForceComponent {
 	readonly graph = input.required<SpecGraph>();

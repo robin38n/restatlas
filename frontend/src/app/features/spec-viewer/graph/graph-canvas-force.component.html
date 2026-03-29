@@ -1,0 +1,15 @@
+<div class="graph-container" #container>
+	<svg #svg aria-label="Interactive API graph visualization"></svg>
+	<app-graph-legend />
+	<app-graph-controls
+		(zoomIn)="onZoomIn()"
+		(zoomOut)="onZoomOut()"
+		(resetZoom)="onResetZoom()"
+		(fullscreen)="onFullscreen()"
+	/>
+	@if (graph().nodes.length === 0) {
+		<div class="absolute inset-0 flex items-center justify-center">
+			<p class="text-gray-400 text-sm">No nodes match the current filters</p>
+		</div>
+	}
+</div>

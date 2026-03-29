@@ -1,0 +1,57 @@
+<div class="max-w-[700px] mx-auto mt-12 px-4">
+	<h1 class="text-3xl font-bold mb-1">Visual OpenAPI Explorer</h1>
+	<p class="text-gray-600 text-sm mb-6 leading-relaxed">Paste a spec or upload a file to visualize your API as an interactive graph.</p>
+
+	<div class="border border-gray-300 rounded-md overflow-hidden">
+		<div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+			@if (demos().length > 0) {
+				<span class="text-xs text-gray-500 shrink-0">Examples:</span>
+				@for (d of demos(); track d.slug) {
+					<button
+						class="text-xs py-0.5 px-2 border rounded-xl cursor-pointer transition-all"
+						[class]="selectedDemoSlug() === d.slug ? 'bg-slate-800 text-white border-slate-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-400'"
+						(click)="selectDemo(d.slug)"
+						[disabled]="loadingDemo()"
+					>{{ d.title }}</button>
+				}
+			}
+		</div>
+		<textarea
+			#specInput
+			class="w-full min-h-[360px] max-h-[500px] font-mono text-sm p-3 border-none outline-none resize-none leading-relaxed box-border"
+			[placeholder]="placeholder"
+			(input)="autoResize()"
+		></textarea>
+	</div>
+
+	<div class="flex gap-3 mt-3">
+		<label class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-300 rounded cursor-pointer bg-white text-gray-800 text-sm hover:bg-gray-50">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/><polyline points="5 6 8 3 11 6"/><line x1="8" y1="3" x2="8" y2="11"/></svg>
+			Upload file
+			<input type="file" accept=".json,.yaml,.yml" (change)="onFileSelect($event)" hidden />
+		</label>
+		<button
+			class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-800 rounded cursor-pointer bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+			(click)="submit()"
+			[disabled]="loading()"
+		>
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+			{{ loading() ? 'Analyzing...' : 'Visualize' }}
+		</button>
+	</div>
+
+	@if (error()) {
+		<div class="mt-4 p-3 bg-red-50 text-red-600 rounded">{{ error() }}</div>
+	}
+
+	@if (summary(); as s) {
+		<div class="mt-4 p-4 bg-green-50 rounded-md border border-green-200">
+			<h2 class="m-0 text-lg font-bold">{{ s.title }} <span class="text-gray-500 text-sm font-normal">v{{ s.version }}</span></h2>
+			<div class="flex gap-4 mt-2 text-gray-600 text-sm">
+				<span>{{ s.endpointCount }} endpoints</span>
+				<span>{{ s.schemaCount }} schemas</span>
+			</div>
+			<a [routerLink]="['/specs', s.id]" class="inline-block mt-3 py-2 px-4 bg-gray-800 text-white rounded no-underline text-sm hover:bg-gray-600">View Graph &rarr;</a>
+		</div>
+	}
+</div>

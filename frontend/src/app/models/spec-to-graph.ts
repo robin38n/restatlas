@@ -1,3 +1,4 @@
+import { asArray, asRecord } from "../core/utils/record-helpers";
 import type {
 	EdgeKind,
 	EndpointNode,
@@ -25,18 +26,6 @@ const REF_PREFIX = "#/components/schemas/";
 function resolveSchemaRef(ref: unknown): string | null {
 	if (typeof ref !== "string" || !ref.startsWith(REF_PREFIX)) return null;
 	return `schema:${ref.slice(REF_PREFIX.length)}`;
-}
-
-/** Safely access a nested property as a record. */
-function asRecord(obj: unknown): Record<string, unknown> | null {
-	return obj != null && typeof obj === "object" && !Array.isArray(obj)
-		? (obj as Record<string, unknown>)
-		: null;
-}
-
-/** Safely access a value as an array. */
-function asArray(obj: unknown): unknown[] | null {
-	return Array.isArray(obj) ? obj : null;
 }
 
 /**

@@ -1,0 +1,13 @@
+<nav class="flex items-center px-4 py-2 border-b border-gray-200 bg-white">
+	<a routerLink="/" class="flex items-center gap-2 no-underline text-gray-900">
+		<img src="assets/icons/reqviz.svg" alt="" class="size-6" />
+		<span class="font-bold text-lg">ReqViz</span>
+	</a>
+	<div class="flex items-center gap-4 ml-auto">
+		<a routerLink="/" routerLinkActive="!text-gray-900 !font-semibold" [routerLinkActiveOptions]="{ exact: true }"
+			class="text-sm text-gray-500 no-underline px-2 py-1 rounded transition-colors hover:text-gray-900 hover:bg-gray-100">Explorer</a>
+		<a routerLink="/api-client" routerLinkActive="!text-gray-900 !font-semibold"
+			class="text-sm text-gray-500 no-underline px-2 py-1 rounded transition-colors hover:text-gray-900 hover:bg-gray-100">API Client</a>
+	</div>
+</nav>
+<router-outlet />

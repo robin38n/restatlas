@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist", "!!src/app/api/schema.d.ts"]
+		"includes": ["**", "!!**/dist", "!!src/app/core/schema.d.ts"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -21,6 +21,11 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	"html": {
+		"parser": {
+			"interpolation": true
 		}
 	},
 	"assist": {

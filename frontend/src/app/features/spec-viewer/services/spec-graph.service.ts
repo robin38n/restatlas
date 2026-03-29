@@ -1,13 +1,13 @@
 import { computed, effect, Injectable, inject, signal } from "@angular/core";
-import { ApiService } from "../../api/api.service";
-import type { components } from "../../api/schema";
+import { ApiService } from "../../../core/api.service";
+import type { components } from "../../../core/schema";
 import type {
 	EndpointNode,
 	GraphNode,
 	SchemaNode,
 	SpecGraph,
-} from "../../models/graph.model";
-import { buildSpecGraph } from "../../models/spec-to-graph";
+} from "../../../models/graph.model";
+import { buildSpecGraph } from "../../../models/spec-to-graph";
 
 type SpecSummary = components["schemas"]["SpecSummary"];
 

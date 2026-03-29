@@ -1,0 +1,30 @@
+<div class="mt-3 border-t border-gray-200 pt-3">
+	<div class="flex items-center gap-2 mb-2">
+		<app-status-badge [status]="response().status" size="base" />
+		@if (response().durationMs != null) {
+			<span class="text-xs text-gray-500">{{ response().durationMs }}ms</span>
+		}
+	</div>
+
+	<button
+		class="bg-transparent border-none cursor-pointer text-xs text-gray-500 py-1 flex items-center gap-1.5 hover:text-gray-700"
+		(click)="headersExpanded.update(v => !v)"
+	>
+		Headers ({{ headerEntries().length }})
+		<span>{{ headersExpanded() ? '\u25B2' : '\u25BC' }}</span>
+	</button>
+	@if (headersExpanded()) {
+		<div class="bg-gray-50 rounded p-2 mb-2 text-[0.7rem]">
+			@for (h of headerEntries(); track h[0]) {
+				<div class="flex gap-1.5 py-px">
+					<span class="font-semibold text-gray-700 shrink-0">{{ h[0] }}:</span>
+					<span class="text-gray-500 break-all">{{ h[1] }}</span>
+				</div>
+			}
+		</div>
+	}
+
+	@if (formattedBody()) {
+		<pre class="whitespace-pre-wrap break-all font-mono text-xs bg-slate-50 border border-gray-200 rounded p-3 max-h-[400px] overflow-y-auto mt-2 mb-0"><code>{{ formattedBody() }}</code></pre>
+	}
+</div>

@@ -16,9 +16,16 @@ import type {
 	GraphNode,
 	SchemaNode,
 	SpecGraph,
-} from "../../models/graph.model";
-import { GraphControlsComponent } from "./graph-controls";
-import { GraphLegendComponent } from "./graph-legend";
+} from "../../../models/graph.model";
+import { METHOD_COLORS } from "../../../shared/constants/method-colors";
+import {
+	EDGE_DASH,
+	SCHEMA_FILL,
+	SCHEMA_STROKE,
+	edgeColor,
+} from "../../../shared/constants/edge-styles";
+import { GraphControlsComponent } from "./graph-controls.component";
+import { GraphLegendComponent } from "./graph-legend.component";
 
 interface SimNode {
 	id: string;
@@ -41,94 +48,12 @@ interface SimLink {
 	points?: Array<{ x: number; y: number }>;
 }
 
-const METHOD_COLORS: Record<string, string> = {
-	GET: "#16a34a",
-	POST: "#2563eb",
-	PUT: "#d97706",
-	PATCH: "#9333ea",
-	DELETE: "#dc2626",
-	HEAD: "#6b7280",
-	OPTIONS: "#6b7280",
-};
-
-const EDGE_DASH: Record<EdgeKind, string> = {
-	requestBody: "none",
-	response: "none",
-	parameter: "4 2",
-	property: "none",
-	arrayItem: "6 3",
-	composition: "2 2",
-};
-
-const SCHEMA_FILL = "#f8fafc";
-const SCHEMA_STROKE = "#64748b";
-
-function edgeColor(kind: EdgeKind, label?: string): string {
-	switch (kind) {
-		case "requestBody":
-			return "#2563eb";
-		case "parameter":
-			return "#6366f1";
-		case "response": {
-			const ch = label?.charAt(0);
-			if (ch === "2") return "#16a34a";
-			if (ch === "4") return "#ef4444";
-			if (ch === "5") return "#991b1b";
-			return "#16a34a"; // default for response
-		}
-		case "property":
-		case "arrayItem":
-		case "composition":
-			return "#94a3b8";
-	}
-}
-
 @Component({
 	selector: "app-graph-canvas",
-	standalone: true,
 	imports: [GraphControlsComponent, GraphLegendComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	template: `<div class="graph-container" #container>
-		<svg #svg></svg>
-		<app-graph-legend />
-		<app-graph-controls
-			(zoomIn)="onZoomIn()"
-			(zoomOut)="onZoomOut()"
-			(resetZoom)="onResetZoom()"
-			(fullscreen)="onFullscreen()"
-		/>
-		@if (graph().nodes.length === 0) {
-			<div class="empty-state">
-				<p>No nodes match the current filters</p>
-			</div>
-		}
-	</div>`,
-	styles: `
-		.graph-container {
-			width: 100%;
-			height: 500px;
-			border: 1px solid #e5e7eb;
-			border-radius: 6px;
-			overflow: hidden;
-			background: #fafafa;
-			position: relative;
-		}
-		svg {
-			width: 100%;
-			height: 100%;
-		}
-		.empty-state {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-		.empty-state p {
-			color: #999;
-			font-size: 0.9rem;
-		}
-	`,
+	templateUrl: "./graph-canvas.component.html",
+	styleUrl: "./graph-canvas.component.css",
 })
 export class GraphCanvasComponent {
 	readonly graph = input.required<SpecGraph>();

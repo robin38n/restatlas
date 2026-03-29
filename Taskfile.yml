@@ -42,7 +42,7 @@ tasks:
 
   lint:frontend:
     dir: frontend
-    cmd: biome check .
+    cmd: bunx --bun @biomejs/biome check .
 
   lint:backend:
     dir: backend
