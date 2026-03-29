@@ -19,11 +19,13 @@
 
 	<div class="flex border border-gray-200 rounded-md overflow-hidden mb-3">
 		<button
+			type="button"
 			class="flex-1 py-1.5 text-[0.8rem] border-none cursor-pointer transition-colors"
 			[class]="activeTab() === 'details' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
 			(click)="activeTab.set('details')"
 		>Details</button>
 		<button
+			type="button"
 			class="flex-1 py-1.5 text-[0.8rem] border-none border-l border-gray-200 cursor-pointer transition-colors"
 			[class]="activeTab() === 'try-it' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
 			(click)="activeTab.set('try-it')"
@@ -63,7 +65,7 @@
 			<section class="mt-3 pt-3 border-t border-gray-100">
 				<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Request Body</h4>
 				@for (ref of requestBodySchemas(); track ref) {
-					<button class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
+					<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
 				}
 			</section>
 		}
@@ -77,7 +79,7 @@
 						<app-status-badge [status]="r.status" size="sm" />
 						<span class="text-gray-500 text-xs">{{ r.description }}</span>
 						@for (ref of r.schemas; track ref) {
-							<button class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
+							<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
 						}
 					</div>
 				}
@@ -91,7 +93,7 @@
 				@for (c of connectedNodes(); track c.id) {
 					<div class="flex items-center gap-1.5 mb-1">
 						<span class="font-mono text-[0.65rem] py-px px-1 bg-gray-100 rounded-sm text-gray-500">{{ c.kind }}</span>
-						<button class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(c.id)">{{ c.label }}</button>
+						<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(c.id)">{{ c.label }}</button>
 						@if (c.edgeLabel) {
 							<span class="text-gray-400 text-[0.7rem]">{{ c.edgeLabel }}</span>
 						}
@@ -104,6 +106,7 @@
 	<div [hidden]="activeTab() !== 'try-it'">
 		<app-try-it-out />
 		<button
+			type="button"
 			class="block mt-3 py-1.5 px-3 bg-transparent border border-gray-300 rounded text-gray-500 text-xs cursor-pointer transition-all hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50"
 			(click)="openInApiClient()"
 		>Open in API Client &rarr;</button>

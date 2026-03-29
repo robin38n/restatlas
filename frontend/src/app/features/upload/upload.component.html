@@ -8,6 +8,7 @@
 				<span class="text-xs text-gray-500 shrink-0">Examples:</span>
 				@for (d of demos(); track d.slug) {
 					<button
+						type="button"
 						class="text-xs py-0.5 px-2 border rounded-xl cursor-pointer transition-all"
 						[class]="selectedDemoSlug() === d.slug ? 'bg-slate-800 text-white border-slate-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-400'"
 						(click)="selectDemo(d.slug)"
@@ -26,16 +27,17 @@
 
 	<div class="flex gap-3 mt-3">
 		<label class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-300 rounded cursor-pointer bg-white text-gray-800 text-sm hover:bg-gray-50">
-			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/><polyline points="5 6 8 3 11 6"/><line x1="8" y1="3" x2="8" y2="11"/></svg>
+			<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/><polyline points="5 6 8 3 11 6"/><line x1="8" y1="3" x2="8" y2="11"/></svg>
 			Upload file
 			<input type="file" accept=".json,.yaml,.yml" (change)="onFileSelect($event)" hidden />
 		</label>
 		<button
+			type="button"
 			class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-800 rounded cursor-pointer bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
 			(click)="submit()"
 			[disabled]="loading()"
 		>
-			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+			<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
 			{{ loading() ? 'Analyzing...' : 'Visualize' }}
 		</button>
 	</div>

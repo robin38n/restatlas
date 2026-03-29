@@ -3,8 +3,8 @@ import {
 	Component,
 	computed,
 	inject,
-	signal,
 	type Signal,
+	signal,
 } from "@angular/core";
 import { Router } from "@angular/router";
 import { dig } from "../../../core/utils/dig";
@@ -48,38 +48,37 @@ export class EndpointDetailComponent {
 	readonly endpointParams = computed(() => {
 		const op = this.rawOperation();
 		if (!op) return [];
-		const params = op["parameters"];
+		const params = op.parameters;
 		if (!Array.isArray(params)) return [];
 		return params
 			.filter(
-				(p): p is Record<string, unknown> =>
-					p != null && typeof p === "object",
+				(p): p is Record<string, unknown> => p != null && typeof p === "object",
 			)
 			.map((p) => ({
-				name: String(p["name"] ?? ""),
-				in: String(p["in"] ?? ""),
-				type: schemaType(asRecord(p["schema"])),
-				required: Boolean(p["required"]),
+				name: String(p.name ?? ""),
+				in: String(p.in ?? ""),
+				type: schemaType(asRecord(p.schema)),
+				required: Boolean(p.required),
 			}));
 	});
 
 	readonly requestBodySchemas = computed(() => {
 		const op = this.rawOperation();
 		if (!op) return [];
-		return extractContentRefs(asRecord(op["requestBody"]));
+		return extractContentRefs(asRecord(op.requestBody));
 	});
 
 	readonly responseEntries = computed(() => {
 		const op = this.rawOperation();
 		if (!op) return [];
-		const responses = asRecord(op["responses"]);
+		const responses = asRecord(op.responses);
 		if (!responses) return [];
 		return Object.entries(responses).map(([status, respDef]) => {
 			const resp = asRecord(respDef);
 			return {
 				status,
 				statusGroup: status.charAt(0),
-				description: resp ? String(resp["description"] ?? "") : "",
+				description: resp ? String(resp.description ?? "") : "",
 				schemas: extractContentRefs(resp),
 			};
 		});
@@ -112,7 +111,7 @@ export class EndpointDetailComponent {
 		const servers = dig(raw, "servers");
 		if (!Array.isArray(servers) || servers.length === 0) return "";
 		const first = asRecord(servers[0]);
-		return first ? String(first["url"] ?? "") : "";
+		return first ? String(first.url ?? "") : "";
 	});
 
 	openInApiClient(): void {

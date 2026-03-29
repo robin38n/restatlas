@@ -16,13 +16,13 @@ import type {
 	SchemaNode,
 	SpecGraph,
 } from "../../../models/graph.model";
-import { METHOD_COLORS } from "../../../shared/constants/method-colors";
 import {
 	EDGE_COLORS,
 	EDGE_DASH,
 	SCHEMA_FILL,
 	SCHEMA_STROKE,
 } from "../../../shared/constants/edge-styles";
+import { METHOD_COLORS } from "../../../shared/constants/method-colors";
 import { GraphControlsComponent } from "./graph-controls.component";
 import { GraphLegendComponent } from "./graph-legend.component";
 
@@ -70,7 +70,12 @@ export class GraphCanvasForceComponent {
 
 	private simulation: d3.Simulation<SimNode, SimLink> | null = null;
 	private zoom: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
-	private svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+	private svgSelection: d3.Selection<
+		SVGSVGElement,
+		unknown,
+		null,
+		undefined
+	> | null = null;
 
 	constructor() {
 		afterNextRender(() => {
@@ -374,7 +379,10 @@ export class GraphCanvasForceComponent {
 
 	onResetZoom(): void {
 		if (this.zoom && this.svgSelection) {
-			this.svgSelection.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+			this.svgSelection
+				.transition()
+				.duration(300)
+				.call(this.zoom.transform, d3.zoomIdentity);
 		}
 	}
 

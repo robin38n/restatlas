@@ -6,8 +6,8 @@ import {
 	signal,
 } from "@angular/core";
 import { Router } from "@angular/router";
-import { ResponseViewerComponent } from "../../shared/components/response-viewer/response-viewer.component";
 import { RequestHistoryComponent } from "../../shared/components/request-history/request-history.component";
+import { ResponseViewerComponent } from "../../shared/components/response-viewer/response-viewer.component";
 import {
 	type HistoryEntry,
 	type ProxyRequest,
@@ -40,11 +40,11 @@ export class ApiClientComponent {
 	constructor() {
 		const state = this.router.getCurrentNavigation()?.extras?.state;
 		if (state) {
-			if (state["method"]) this.method.set(String(state["method"]));
-			if (state["url"]) this.url.set(String(state["url"]));
-			if (state["body"]) this.body.set(String(state["body"]));
-			if (Array.isArray(state["headers"])) {
-				this.headers.set(state["headers"]);
+			if (state.method) this.method.set(String(state.method));
+			if (state.url) this.url.set(String(state.url));
+			if (state.body) this.body.set(String(state.body));
+			if (Array.isArray(state.headers)) {
+				this.headers.set(state.headers);
 			}
 		}
 	}

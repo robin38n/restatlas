@@ -9,6 +9,7 @@
 				readonly
 			/>
 			<button
+				type="button"
 				class="py-1.5 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-[0.8rem] font-semibold shrink-0 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
 				(click)="sendRequest()"
 				[disabled]="tryItOut.loading()"
@@ -94,6 +95,7 @@
 				<div class="flex items-center justify-between">
 					<h4 class="m-0 mb-1.5 text-xs text-gray-500 uppercase tracking-wide font-semibold">Request Body</h4>
 					<button
+						type="button"
 						class="bg-transparent border border-gray-300 rounded py-0.5 px-2 text-[0.7rem] text-gray-500 cursor-pointer hover:bg-gray-100"
 						(click)="rawBodyMode.update(v => !v)"
 					>{{ rawBodyMode() ? 'Form' : 'Raw JSON' }}</button>

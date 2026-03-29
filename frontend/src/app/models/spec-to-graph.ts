@@ -38,13 +38,13 @@ function collectSchemaEdges(
 ): GraphEdge[] {
 	const edges: GraphEdge[] = [];
 
-	const properties = asRecord(schema["properties"]);
+	const properties = asRecord(schema.properties);
 	if (properties) {
 		for (const [propName, propDef] of Object.entries(properties)) {
 			const prop = asRecord(propDef);
 			if (!prop) continue;
 
-			const directRef = resolveSchemaRef(prop["$ref"]);
+			const directRef = resolveSchemaRef(prop.$ref);
 			if (directRef) {
 				edges.push({
 					source: sourceId,
@@ -55,9 +55,9 @@ function collectSchemaEdges(
 				continue;
 			}
 
-			const items = asRecord(prop["items"]);
+			const items = asRecord(prop.items);
 			if (items) {
-				const itemRef = resolveSchemaRef(items["$ref"]);
+				const itemRef = resolveSchemaRef(items.$ref);
 				if (itemRef) {
 					edges.push({
 						source: sourceId,
@@ -76,7 +76,7 @@ function collectSchemaEdges(
 		for (const entry of arr) {
 			const entryObj = asRecord(entry);
 			if (!entryObj) continue;
-			const ref = resolveSchemaRef(entryObj["$ref"]);
+			const ref = resolveSchemaRef(entryObj.$ref);
 			if (ref) {
 				edges.push({
 					source: sourceId,
@@ -100,7 +100,7 @@ function collectEndpointEdges(
 ): GraphEdge[] {
 	const edges: GraphEdge[] = [];
 
-	const requestBody = asRecord(operation["requestBody"]);
+	const requestBody = asRecord(operation.requestBody);
 	if (requestBody) {
 		for (const ref of extractContentSchemaRefs(requestBody)) {
 			edges.push({
@@ -111,7 +111,7 @@ function collectEndpointEdges(
 		}
 	}
 
-	const responses = asRecord(operation["responses"]);
+	const responses = asRecord(operation.responses);
 	if (responses) {
 		for (const [statusCode, responseDef] of Object.entries(responses)) {
 			const response = asRecord(responseDef);
@@ -127,21 +127,21 @@ function collectEndpointEdges(
 		}
 	}
 
-	const params = asArray(operation["parameters"]);
+	const params = asArray(operation.parameters);
 	if (params) {
 		for (const param of params) {
 			const paramObj = asRecord(param);
 			if (!paramObj) continue;
-			const paramSchema = asRecord(paramObj["schema"]);
+			const paramSchema = asRecord(paramObj.schema);
 			if (!paramSchema) continue;
 
-			const ref = resolveSchemaRef(paramSchema["$ref"]);
+			const ref = resolveSchemaRef(paramSchema.$ref);
 			if (ref) {
 				edges.push({
 					source: endpointId,
 					target: ref,
 					kind: "parameter",
-					label: paramObj["name"] as string,
+					label: paramObj.name as string,
 				});
 			}
 		}
@@ -158,24 +158,24 @@ function extractContentSchemaRefs(
 	bodyOrResponse: Record<string, unknown>,
 ): string[] {
 	const refs: string[] = [];
-	const content = asRecord(bodyOrResponse["content"]);
+	const content = asRecord(bodyOrResponse.content);
 	if (!content) return refs;
 
 	for (const mediaType of Object.values(content)) {
 		const media = asRecord(mediaType);
 		if (!media) continue;
-		const schema = asRecord(media["schema"]);
+		const schema = asRecord(media.schema);
 		if (!schema) continue;
 
-		const directRef = resolveSchemaRef(schema["$ref"]);
+		const directRef = resolveSchemaRef(schema.$ref);
 		if (directRef) {
 			refs.push(directRef);
 			continue;
 		}
 
-		const items = asRecord(schema["items"]);
+		const items = asRecord(schema.items);
 		if (items) {
-			const itemRef = resolveSchemaRef(items["$ref"]);
+			const itemRef = resolveSchemaRef(items.$ref);
 			if (itemRef) refs.push(itemRef);
 		}
 	}
@@ -191,17 +191,17 @@ export function buildSpecGraph(raw: Record<string, unknown>): SpecGraph {
 	const edges: GraphEdge[] = [];
 
 	// Phase 1: Schema nodes
-	const components = asRecord(raw["components"]);
-	const schemas = components ? asRecord(components["schemas"]) : null;
+	const components = asRecord(raw.components);
+	const schemas = components ? asRecord(components.schemas) : null;
 
 	if (schemas) {
 		for (const [name, schemaDef] of Object.entries(schemas)) {
 			const schema = asRecord(schemaDef);
 			if (!schema) continue;
 
-			const properties = asRecord(schema["properties"]);
+			const properties = asRecord(schema.properties);
 			const propNames = properties ? Object.keys(properties) : [];
-			const required = asArray(schema["required"]);
+			const required = asArray(schema.required);
 			const requiredProps = required
 				? (required.filter((r) => typeof r === "string") as string[])
 				: [];
@@ -220,7 +220,7 @@ export function buildSpecGraph(raw: Record<string, unknown>): SpecGraph {
 	}
 
 	// Phase 2: Endpoint nodes
-	const paths = asRecord(raw["paths"]);
+	const paths = asRecord(raw.paths);
 	if (paths) {
 		for (const [pathStr, pathDef] of Object.entries(paths)) {
 			const pathItem = asRecord(pathDef);
@@ -231,15 +231,15 @@ export function buildSpecGraph(raw: Record<string, unknown>): SpecGraph {
 				if (!operation) continue;
 
 				const endpointId = `${method.toUpperCase()} ${pathStr}`;
-				const tags = asArray(operation["tags"]);
+				const tags = asArray(operation.tags);
 
 				nodes.push({
 					id: endpointId,
 					type: "endpoint",
 					path: pathStr,
 					method: method.toUpperCase(),
-					summary: (operation["summary"] as string) ?? "",
-					operationId: operation["operationId"] as string | undefined,
+					summary: (operation.summary as string) ?? "",
+					operationId: operation.operationId as string | undefined,
 					tags: tags
 						? (tags.filter((t) => typeof t === "string") as string[])
 						: [],

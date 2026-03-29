@@ -10,15 +10,15 @@ import { asRecord } from "../../../core/utils/record-helpers";
 import { extractEnumFromParam } from "../../../core/utils/schema-helpers";
 import type { EndpointNode } from "../../../models/graph.model";
 import { MethodBadgeComponent } from "../../../shared/components/method-badge/method-badge.component";
-import { ResponseViewerComponent } from "../../../shared/components/response-viewer/response-viewer.component";
 import { RequestHistoryComponent } from "../../../shared/components/request-history/request-history.component";
-import { SchemaFormComponent } from "./schema-form.component";
+import { ResponseViewerComponent } from "../../../shared/components/response-viewer/response-viewer.component";
 import { SpecGraphService } from "../services/spec-graph.service";
 import {
 	type HistoryEntry,
 	type ProxyRequest,
 	TryItOutService,
 } from "../services/try-it-out.service";
+import { SchemaFormComponent } from "./schema-form.component";
 
 @Component({
 	selector: "app-try-it-out",
@@ -58,7 +58,7 @@ export class TryItOutComponent {
 	private readonly rawParams = computed(() => {
 		const op = this.rawOperation();
 		if (!op) return [];
-		const params = op["parameters"];
+		const params = op.parameters;
 		if (!Array.isArray(params)) return [];
 		return params.filter(
 			(p): p is Record<string, unknown> => p != null && typeof p === "object",
@@ -67,33 +67,33 @@ export class TryItOutComponent {
 
 	readonly pathParams = computed(() =>
 		this.rawParams()
-			.filter((p) => p["in"] === "path")
+			.filter((p) => p.in === "path")
 			.map((p) => ({
-				name: String(p["name"] ?? ""),
-				required: Boolean(p["required"]),
-				schema: asRecord(p["schema"]),
+				name: String(p.name ?? ""),
+				required: Boolean(p.required),
+				schema: asRecord(p.schema),
 				enumValues: extractEnumFromParam(p),
 			})),
 	);
 
 	readonly queryParams = computed(() =>
 		this.rawParams()
-			.filter((p) => p["in"] === "query")
+			.filter((p) => p.in === "query")
 			.map((p) => ({
-				name: String(p["name"] ?? ""),
-				required: Boolean(p["required"]),
-				schema: asRecord(p["schema"]),
+				name: String(p.name ?? ""),
+				required: Boolean(p.required),
+				schema: asRecord(p.schema),
 				enumValues: extractEnumFromParam(p),
 			})),
 	);
 
 	readonly headerParams = computed(() =>
 		this.rawParams()
-			.filter((p) => p["in"] === "header")
+			.filter((p) => p.in === "header")
 			.map((p) => ({
-				name: String(p["name"] ?? ""),
-				required: Boolean(p["required"]),
-				schema: asRecord(p["schema"]),
+				name: String(p.name ?? ""),
+				required: Boolean(p.required),
+				schema: asRecord(p.schema),
 				enumValues: extractEnumFromParam(p),
 			})),
 	);
@@ -117,7 +117,7 @@ export class TryItOutComponent {
 		const servers = dig(raw, "servers");
 		if (!Array.isArray(servers) || servers.length === 0) return "";
 		const first = asRecord(servers[0]);
-		return first ? String(first["url"] ?? "") : "";
+		return first ? String(first.url ?? "") : "";
 	});
 
 	readonly constructedUrl = computed(() => {
@@ -140,8 +140,7 @@ export class TryItOutComponent {
 				? "?" +
 					queryEntries
 						.map(
-							([k, v]) =>
-								`${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
+							([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
 						)
 						.join("&")
 				: "";
@@ -238,4 +237,3 @@ export class TryItOutComponent {
 		this.tryItOut.lastResponse.set(entry.response);
 	}
 }
-

@@ -6,7 +6,7 @@ import {
 	signal,
 	viewChild,
 } from "@angular/core";
-import { Router, RouterLink } from "@angular/router";
+import { RouterLink } from "@angular/router";
 import { ApiService } from "../../core/api.service";
 import type { components } from "../../core/schema";
 
@@ -33,7 +33,6 @@ const PLACEHOLDER_JSON = `{
 })
 export class UploadComponent {
 	private readonly api = inject(ApiService);
-	private readonly router = inject(Router);
 	specInput = viewChild.required<ElementRef<HTMLTextAreaElement>>("specInput");
 
 	loading = signal(false);

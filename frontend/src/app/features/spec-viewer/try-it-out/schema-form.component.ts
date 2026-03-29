@@ -12,7 +12,7 @@ function resolveRef(
 	allSchemas: Record<string, unknown>,
 ): Record<string, unknown> | null {
 	if (!schema) return null;
-	const ref = schema["$ref"];
+	const ref = schema.$ref;
 	if (typeof ref === "string" && ref.startsWith("#/components/schemas/")) {
 		const name = ref.slice("#/components/schemas/".length);
 		return asRecord(allSchemas[name]) ?? null;
@@ -30,10 +30,10 @@ interface FormField {
 }
 
 function determineFieldType(schema: Record<string, unknown>): string {
-	if (schema["enum"]) return "enum";
-	if (schema["$ref"]) return "object";
-	const type = schema["type"];
-	if (type === "object" || schema["properties"]) return "object";
+	if (schema.enum) return "enum";
+	if (schema.$ref) return "object";
+	const type = schema.type;
+	if (type === "object" || schema.properties) return "object";
 	if (type === "array") return "array";
 	if (type === "boolean") return "boolean";
 	if (type === "integer") return "integer";
@@ -42,12 +42,13 @@ function determineFieldType(schema: Record<string, unknown>): string {
 }
 
 function extractEnum(schema: Record<string, unknown>): string[] {
-	const e = schema["enum"];
+	const e = schema.enum;
 	return Array.isArray(e) ? e.map(String) : [];
 }
 
 @Component({
 	selector: "app-schema-form",
+	// biome-ignore lint/correctness/noInvalidUseBeforeDeclaration: recursive component requires self-import
 	imports: [SchemaFormComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	templateUrl: "./schema-form.component.html",
@@ -65,10 +66,12 @@ export class SchemaFormComponent {
 	readonly fields = computed((): FormField[] => {
 		const s = this.resolvedSchema();
 		if (!s) return [];
-		const props = asRecord(s["properties"]);
+		const props = asRecord(s.properties);
 		if (!props) return [];
-		const required = Array.isArray(s["required"])
-			? new Set(s["required"].filter((r: unknown): r is string => typeof r === "string"))
+		const required = Array.isArray(s.required)
+			? new Set(
+					s.required.filter((r: unknown): r is string => typeof r === "string"),
+				)
 			: new Set<string>();
 
 		return Object.entries(props).map(([name, propDef]) => {
@@ -80,18 +83,23 @@ export class SchemaFormComponent {
 				required: required.has(name),
 				type: determineFieldType(resolved),
 				enumValues: extractEnum(resolved),
-				format: String(resolved["format"] ?? ""),
+				format: String(resolved.format ?? ""),
 			};
 		});
 	});
 
 	inputType(format: string): string {
 		switch (format) {
-			case "email": return "email";
-			case "password": return "password";
-			case "uri": return "url";
-			case "date-time": return "datetime-local";
-			default: return "text";
+			case "email":
+				return "email";
+			case "password":
+				return "password";
+			case "uri":
+				return "url";
+			case "date-time":
+				return "datetime-local";
+			default:
+				return "text";
 		}
 	}
 
@@ -110,14 +118,16 @@ export class SchemaFormComponent {
 		return Array.isArray(v) ? v : [];
 	}
 
-	getArrayItemSchema(fieldSchema: Record<string, unknown>): Record<string, unknown> {
-		return asRecord(fieldSchema["items"]) ?? {};
+	getArrayItemSchema(
+		fieldSchema: Record<string, unknown>,
+	): Record<string, unknown> {
+		return asRecord(fieldSchema.items) ?? {};
 	}
 
 	isObjectArray(fieldSchema: Record<string, unknown>): boolean {
-		const items = asRecord(fieldSchema["items"]);
+		const items = asRecord(fieldSchema.items);
 		if (!items) return false;
-		return items["type"] === "object" || !!items["properties"] || !!items["$ref"];
+		return items.type === "object" || !!items.properties || !!items.$ref;
 	}
 
 	asRecord(v: unknown): Record<string, unknown> | null {
@@ -153,7 +163,10 @@ export class SchemaFormComponent {
 		const newItem = this.isObjectArray(fieldSchema) ? {} : "";
 		this.value.update((c) => ({
 			...c,
-			[name]: [...(Array.isArray(c[name]) ? (c[name] as unknown[]) : []), newItem],
+			[name]: [
+				...(Array.isArray(c[name]) ? (c[name] as unknown[]) : []),
+				newItem,
+			],
 		}));
 	}
 
@@ -165,7 +178,11 @@ export class SchemaFormComponent {
 		});
 	}
 
-	updateArrayItem(name: string, index: number, val: Record<string, unknown>): void {
+	updateArrayItem(
+		name: string,
+		index: number,
+		val: Record<string, unknown>,
+	): void {
 		this.value.update((c) => {
 			const arr = Array.isArray(c[name]) ? [...(c[name] as unknown[])] : [];
 			arr[index] = val;
@@ -186,13 +203,17 @@ export class SchemaFormComponent {
 		const val = (event.target as HTMLTextAreaElement).value;
 		try {
 			this.value.set(JSON.parse(val));
-		} catch { /* ignore invalid JSON while typing */ }
+		} catch {
+			/* ignore invalid JSON while typing */
+		}
 	}
 
 	onRawFieldInput(name: string, event: Event): void {
 		const val = (event.target as HTMLTextAreaElement).value;
 		try {
 			this.value.update((c) => ({ ...c, [name]: JSON.parse(val) }));
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 }

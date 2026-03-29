@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	input,
+} from "@angular/core";
 
 const METHOD_BG: Record<string, string> = {
 	GET: "bg-green-600",

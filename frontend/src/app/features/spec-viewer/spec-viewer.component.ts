@@ -3,8 +3,8 @@ import {
 	Component,
 	computed,
 	inject,
-	signal,
 	type OnInit,
+	signal,
 } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import type {
@@ -12,10 +12,10 @@ import type {
 	GraphNode,
 	SchemaNode,
 } from "../../models/graph.model";
+import { MethodBadgeComponent } from "../../shared/components/method-badge/method-badge.component";
 import { GraphCanvasComponent } from "./graph/graph-canvas.component";
 import { GraphCanvasForceComponent } from "./graph/graph-canvas-force.component";
 import { GraphToolbarComponent } from "./graph/graph-toolbar.component";
-import { MethodBadgeComponent } from "../../shared/components/method-badge/method-badge.component";
 import { NodeDetailComponent } from "./node-detail/node-detail.component";
 import { SpecGraphService } from "./services/spec-graph.service";
 

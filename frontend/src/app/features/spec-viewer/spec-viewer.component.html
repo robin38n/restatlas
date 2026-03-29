@@ -24,11 +24,13 @@
 			<app-graph-toolbar />
 			<div class="flex border border-gray-200 rounded-md overflow-hidden shrink-0">
 				<button
+					type="button"
 					class="py-1.5 px-3 text-[0.8rem] border-none cursor-pointer transition-colors"
 					[class]="layout() === 'structured' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
 					(click)="layout.set('structured')"
 				>Structured</button>
 				<button
+					type="button"
 					class="py-1.5 px-3 text-[0.8rem] border-none border-l border-gray-200 cursor-pointer transition-colors"
 					[class]="layout() === 'interactive' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
 					(click)="layout.set('interactive')"

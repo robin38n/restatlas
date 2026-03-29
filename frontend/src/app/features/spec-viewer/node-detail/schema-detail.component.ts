@@ -33,21 +33,18 @@ export class SchemaDetailComponent {
 	readonly schemaProperties = computed(() => {
 		const schema = this.rawSchema();
 		if (!schema) return [];
-		const props = asRecord(schema["properties"]);
+		const props = asRecord(schema.properties);
 		if (!props) return [];
-		const required = Array.isArray(schema["required"])
+		const required = Array.isArray(schema.required)
 			? new Set(
-					schema["required"].filter(
-						(r): r is string => typeof r === "string",
-					),
+					schema.required.filter((r): r is string => typeof r === "string"),
 				)
 			: new Set<string>();
 		return Object.entries(props).map(([name, propDef]) => {
 			const prop = asRecord(propDef);
-			const ref = prop?.["$ref"];
+			const ref = prop?.$ref;
 			const refName =
-				typeof ref === "string" &&
-				ref.startsWith("#/components/schemas/")
+				typeof ref === "string" && ref.startsWith("#/components/schemas/")
 					? ref.slice("#/components/schemas/".length)
 					: null;
 			return {
@@ -68,7 +65,7 @@ export class SchemaDetailComponent {
 			if (!Array.isArray(arr)) continue;
 			for (const entry of arr) {
 				const obj = asRecord(entry);
-				const ref = obj?.["$ref"];
+				const ref = obj?.$ref;
 				if (
 					typeof ref === "string" &&
 					ref.startsWith("#/components/schemas/")

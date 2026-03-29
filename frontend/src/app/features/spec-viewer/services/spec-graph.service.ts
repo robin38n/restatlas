@@ -1,4 +1,4 @@
-import { computed, effect, Injectable, inject, signal } from "@angular/core";
+import { computed, Injectable, inject, signal } from "@angular/core";
 import { ApiService } from "../../../core/api.service";
 import type { components } from "../../../core/schema";
 import type {
@@ -110,17 +110,6 @@ export class SpecGraphService {
 			nodes: [...filteredEndpoints, ...filteredSchemas],
 			edges,
 		};
-	});
-
-	// Auto-clear selection when filtered graph no longer contains the selected node
-	private readonly selectionGuard = effect(() => {
-		const fg = this.filteredGraph();
-		const id = this.selectedNodeId();
-		if (!id || !fg) return;
-		const nodeExists = fg.nodes.some((n) => n.id === id);
-		if (!nodeExists) {
-			this.selectedNodeId.set(null);
-		}
 	});
 
 	readonly selectedNode = computed(() => {

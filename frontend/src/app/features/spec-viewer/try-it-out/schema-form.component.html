@@ -78,6 +78,7 @@
 				@case ('array') {
 					<div class="ml-1">
 						<button
+							type="button"
 							class="bg-transparent border border-dashed border-gray-300 text-blue-600 cursor-pointer py-1 px-2 rounded text-xs mb-1.5 w-full hover:bg-blue-50"
 							(click)="addArrayItem(field.name, field.schema)"
 						>+ Add item</button>
@@ -100,6 +101,7 @@
 									/>
 								}
 								<button
+									type="button"
 									class="bg-transparent border-none text-red-600 cursor-pointer text-[0.8rem] p-1 shrink-0"
 									(click)="removeArrayItem(field.name, $index)"
 								>x</button>

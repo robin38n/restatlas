@@ -8,8 +8,8 @@ import {
 	output,
 	viewChild,
 } from "@angular/core";
+import { layout as dagreLayout, Graph } from "@dagrejs/dagre";
 import * as d3 from "d3";
-import { Graph, layout as dagreLayout } from "@dagrejs/dagre";
 import type {
 	EdgeKind,
 	EndpointNode,
@@ -17,13 +17,13 @@ import type {
 	SchemaNode,
 	SpecGraph,
 } from "../../../models/graph.model";
-import { METHOD_COLORS } from "../../../shared/constants/method-colors";
 import {
 	EDGE_DASH,
+	edgeColor,
 	SCHEMA_FILL,
 	SCHEMA_STROKE,
-	edgeColor,
 } from "../../../shared/constants/edge-styles";
+import { METHOD_COLORS } from "../../../shared/constants/method-colors";
 import { GraphControlsComponent } from "./graph-controls.component";
 import { GraphLegendComponent } from "./graph-legend.component";
 
@@ -66,7 +66,12 @@ export class GraphCanvasComponent {
 
 	private initialized = false;
 	private zoom: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
-	private svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+	private svgSelection: d3.Selection<
+		SVGSVGElement,
+		unknown,
+		null,
+		undefined
+	> | null = null;
 
 	constructor() {
 		afterNextRender(() => {
@@ -180,9 +185,7 @@ export class GraphCanvasComponent {
 
 		// Arrow markers keyed by color
 		const defs = svg.append("defs");
-		const uniqueColors = new Set(
-			links.map((l) => edgeColor(l.kind, l.label)),
-		);
+		const uniqueColors = new Set(links.map((l) => edgeColor(l.kind, l.label)));
 		for (const color of uniqueColors) {
 			const hex = color.replace("#", "");
 			defs
@@ -224,7 +227,9 @@ export class GraphCanvasComponent {
 			if (d.points && d.points.length > 0) {
 				return d.points;
 			}
+			// biome-ignore lint/style/noNonNullAssertion: nodes guaranteed to exist in the graph
 			const src = nodeMap.get(d.source)!;
+			// biome-ignore lint/style/noNonNullAssertion: nodes guaranteed to exist in the graph
 			const tgt = nodeMap.get(d.target)!;
 			const sx = src.x + src.width / 2;
 			const sy = src.y + src.height / 2;
@@ -365,17 +370,12 @@ export class GraphCanvasComponent {
 			.on("drag", function (event, d) {
 				d.x += event.dx;
 				d.y += event.dy;
-				d3.select(this).attr(
-					"transform",
-					`translate(${d.x},${d.y})`,
-				);
+				d3.select(this).attr("transform", `translate(${d.x},${d.y})`);
 
 				// Redraw connected edges
 				linkGroup
-					.filter(
-						(l) => l.source === d.id || l.target === d.id,
-					)
-					.each(function (l) {
+					.filter((l) => l.source === d.id || l.target === d.id)
+					.each((l) => {
 						// Clear cached dagre points for dragged links
 						l.points = undefined;
 					})
@@ -383,9 +383,7 @@ export class GraphCanvasComponent {
 
 				// Reposition connected edge labels
 				edgeLabelGroup
-					.filter(
-						(l) => l.source === d.id || l.target === d.id,
-					)
+					.filter((l) => l.source === d.id || l.target === d.id)
 					.attr("x", (l) => {
 						const pts = buildPathPoints(l);
 						return pts[Math.floor(pts.length / 2)].x;
@@ -430,7 +428,10 @@ export class GraphCanvasComponent {
 
 	onResetZoom(): void {
 		if (this.zoom && this.svgSelection) {
-			this.svgSelection.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+			this.svgSelection
+				.transition()
+				.duration(300)
+				.call(this.zoom.transform, d3.zoomIdentity);
 		}
 	}
 

@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from "@angular/core";
+import { computed, Injectable, inject, signal } from "@angular/core";
 import { ApiService } from "../../../core/api.service";
 
 export interface HistoryEntry {
@@ -36,7 +36,7 @@ export class TryItOutService {
 	readonly historyCount = computed(() => this.history().length);
 	readonly selectedEntry = computed(() => {
 		const idx = this.selectedHistoryIndex();
-		return idx != null ? this.history()[idx] ?? null : null;
+		return idx != null ? (this.history()[idx] ?? null) : null;
 	});
 
 	async sendRequest(req: ProxyRequest): Promise<void> {
