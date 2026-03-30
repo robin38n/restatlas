@@ -42,6 +42,7 @@ interface SimNode extends d3.SimulationNodeDatum {
 interface SimLink extends d3.SimulationLinkDatum<SimNode> {
 	kind: EdgeKind;
 	label?: string;
+	curveOffset: number;
 }
 
 function nodeWidth(node: SimNode): number {
@@ -145,7 +146,27 @@ export class GraphCanvasForceComponent {
 				target: e.target,
 				kind: e.kind,
 				label: e.label,
+				curveOffset: 0,
 			}));
+
+		// Assign curve offsets to parallel edges (same source+target pair).
+		// Each parallel edge gets a different offset so they fan out instead of overlapping.
+		const pairCount = new Map<string, number>();
+		const pairIndex = new Map<string, number>();
+		for (const l of links) {
+			const key = [String(l.source), String(l.target)].sort().join("||");
+			pairCount.set(key, (pairCount.get(key) ?? 0) + 1);
+		}
+		for (const l of links) {
+			const key = [String(l.source), String(l.target)].sort().join("||");
+			const total = pairCount.get(key) ?? 1;
+			if (total > 1) {
+				const idx = pairIndex.get(key) ?? 0;
+				pairIndex.set(key, idx + 1);
+				// Spread symmetrically: -20, +20 for 2 edges; -20, 0, +20 for 3, etc.
+				l.curveOffset = (idx - (total - 1) / 2) * 25;
+			}
+		}
 
 		// SVG setup
 		const svg = d3
@@ -183,18 +204,19 @@ export class GraphCanvasForceComponent {
 		this.zoom = zoom;
 		this.svgSelection = svg;
 
-		// Edges
+		// Edges (paths to support curved parallel edges)
 		const linkGroup = g
 			.append("g")
 			.attr("class", "links")
-			.selectAll("line")
+			.selectAll("path")
 			.data(links)
-			.join("line")
+			.join("path")
 			.attr("stroke", (d) => EDGE_COLORS[d.kind])
 			.attr("stroke-width", 1.5)
 			.attr("stroke-dasharray", (d) => EDGE_DASH[d.kind])
 			.attr("marker-end", (d) => `url(#arrow-force-${d.kind})`)
-			.attr("opacity", 0.7);
+			.attr("opacity", 0.7)
+			.attr("fill", "none");
 
 		// Edge labels
 		const edgeLabelGroup = g
@@ -272,11 +294,11 @@ export class GraphCanvasForceComponent {
 			.attr("font-size", 12)
 			.attr("font-weight", 700);
 
-		// Drag behavior
+		// Drag behavior — low alphaTarget to minimize drift of unconnected subgraphs
 		const drag = d3
 			.drag<SVGGElement, SimNode>()
 			.on("start", (event, d) => {
-				if (!event.active) simulation.alphaTarget(0.3).restart();
+				if (!event.active) simulation.alphaTarget(0.05).restart();
 				d.fx = d.x;
 				d.fy = d.y;
 			})
@@ -292,9 +314,12 @@ export class GraphCanvasForceComponent {
 
 		nodeGroup.call(drag);
 
-		// Force simulation
+		// Force simulation — high velocityDecay dampens drift of unconnected subgraphs.
+		// forceX/forceY with low strength replace forceCenter to avoid pulling
+		// disconnected clusters toward the center during drag.
 		const simulation = d3
 			.forceSimulation(nodes)
+			.velocityDecay(0.7)
 			.force(
 				"link",
 				d3
@@ -303,7 +328,8 @@ export class GraphCanvasForceComponent {
 					.distance(160),
 			)
 			.force("charge", d3.forceManyBody().strength(-350))
-			.force("center", d3.forceCenter(width / 2, height / 2))
+			.force("x", d3.forceX(width / 2).strength(0.03))
+			.force("y", d3.forceY(height / 2).strength(0.03))
 			.force(
 				"collision",
 				d3
@@ -311,48 +337,59 @@ export class GraphCanvasForceComponent {
 					.radius((d) => Math.max(d.width, d.height) / 2 + 10),
 			)
 			.on("tick", () => {
-				// Update link positions — account for node centers and clip to edges
-				linkGroup
-					.attr("x1", (d) => {
-						const src = d.source as SimNode;
-						return (src.x ?? 0) + nodeWidth(src) / 2;
-					})
-					.attr("y1", (d) => {
-						const src = d.source as SimNode;
-						return (src.y ?? 0) + nodeHeight(src) / 2;
-					})
-					.attr("x2", (d) => {
-						const tgt = d.target as SimNode;
-						return (tgt.x ?? 0) + nodeWidth(tgt) / 2;
-					})
-					.attr("y2", (d) => {
-						const tgt = d.target as SimNode;
-						return (tgt.y ?? 0) + nodeHeight(tgt) / 2;
-					});
+				// Update link paths — curved for parallel edges, straight otherwise
+				linkGroup.attr("d", (d) => {
+					const src = d.source as SimNode;
+					const tgt = d.target as SimNode;
+					const x1 = (src.x ?? 0) + nodeWidth(src) / 2;
+					const y1 = (src.y ?? 0) + nodeHeight(src) / 2;
+					const x2 = (tgt.x ?? 0) + nodeWidth(tgt) / 2;
+					const y2 = (tgt.y ?? 0) + nodeHeight(tgt) / 2;
 
-				// Edge labels at midpoint
+					if (d.curveOffset === 0) {
+						return `M${x1},${y1} L${x2},${y2}`;
+					}
+
+					// Perpendicular offset for the quadratic control point
+					const dx = x2 - x1;
+					const dy = y2 - y1;
+					const len = Math.sqrt(dx * dx + dy * dy) || 1;
+					const nx = -dy / len;
+					const ny = dx / len;
+					const cx = (x1 + x2) / 2 + nx * d.curveOffset;
+					const cy = (y1 + y2) / 2 + ny * d.curveOffset;
+					return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+				});
+
+				// Edge labels at midpoint (offset along curve for parallel edges)
 				edgeLabelGroup
 					.attr("x", (d) => {
 						const src = d.source as SimNode;
 						const tgt = d.target as SimNode;
-						return (
-							((src.x ?? 0) +
-								nodeWidth(src) / 2 +
-								(tgt.x ?? 0) +
-								nodeWidth(tgt) / 2) /
-							2
-						);
+						const x1 = (src.x ?? 0) + nodeWidth(src) / 2;
+						const x2 = (tgt.x ?? 0) + nodeWidth(tgt) / 2;
+						if (d.curveOffset === 0) return (x1 + x2) / 2;
+						const dx = x2 - x1;
+						const dy =
+							(tgt.y ?? 0) +
+							nodeHeight(tgt) / 2 -
+							((src.y ?? 0) + nodeHeight(src) / 2);
+						const len = Math.sqrt(dx * dx + dy * dy) || 1;
+						return (x1 + x2) / 2 + (-dy / len) * d.curveOffset;
 					})
 					.attr("y", (d) => {
 						const src = d.source as SimNode;
 						const tgt = d.target as SimNode;
-						return (
-							((src.y ?? 0) +
-								nodeHeight(src) / 2 +
-								(tgt.y ?? 0) +
-								nodeHeight(tgt) / 2) /
-							2
-						);
+						const y1 = (src.y ?? 0) + nodeHeight(src) / 2;
+						const y2 = (tgt.y ?? 0) + nodeHeight(tgt) / 2;
+						if (d.curveOffset === 0) return (y1 + y2) / 2;
+						const dx =
+							(tgt.x ?? 0) +
+							nodeWidth(tgt) / 2 -
+							((src.x ?? 0) + nodeWidth(src) / 2);
+						const dy = y2 - y1;
+						const len = Math.sqrt(dx * dx + dy * dy) || 1;
+						return (y1 + y2) / 2 + (dx / len) * d.curveOffset;
 					});
 
 				// Node positions (translate to top-left corner)
