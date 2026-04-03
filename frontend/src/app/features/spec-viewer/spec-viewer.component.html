@@ -48,16 +48,26 @@
 			<div class="grid grid-cols-2 border border-gray-200 rounded-lg mt-6 overflow-hidden bg-white">
 				<!-- List pane -->
 				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-gray-200">
+					<app-list-toolbar 
+						[activeSort]="listSort()"
+						[sortOptions]="[
+							{ value: 'az', label: 'A \u2192 Z' },
+							{ value: 'za', label: 'Z \u2192 A' },
+							{ value: 'method', label: 'By method' }
+						]"
+						(searchChange)="listSearch.set($event)"
+						(sortChange)="listSort.set($event)"
+					/>
 					<section>
 						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Endpoints</h2>
-						@for (ep of filteredEndpoints(); track ep.id) {
+						@for (ep of localEndpoints(); track ep.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100 min-w-0"
 								[class.bg-blue-50]="svc.selectedNodeId() === ep.id"
 								(click)="onNodeClick(ep)"
 							>
 								<app-method-badge [method]="ep.method" />
-								<span class="font-mono text-[0.8rem]">{{ ep.path }}</span>
+								<span class="font-mono text-[0.8rem] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{{ ep.path }}</span>
 							</div>
 						} @empty {
 							<p class="text-gray-400 text-sm">No endpoints found</p>
@@ -66,13 +76,13 @@
 
 					<section class="mt-4">
 						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Schemas</h2>
-						@for (sc of filteredSchemas(); track sc.id) {
+						@for (sc of localSchemas(); track sc.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100 min-w-0"
 								[class.bg-blue-50]="svc.selectedNodeId() === sc.id"
 								(click)="onNodeClick(sc)"
 							>
-								<strong>{{ sc.name }}</strong>
+								<strong class="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{{ sc.name }}</strong>
 								<span class="ml-auto text-gray-400 text-xs">{{ sc.properties.length }} props</span>
 							</div>
 						} @empty {

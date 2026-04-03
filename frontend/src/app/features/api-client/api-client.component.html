@@ -4,7 +4,7 @@
 
 	<!-- URL Bar -->
 	<div class="flex items-center gap-2 mb-4">
-		<select class="py-2 px-2 border rounded text-[0.85rem] font-semibold cursor-pointer text-white min-w-[5.5rem] h-[2.15rem] box-border bg-gray-600 border-gray-600 data-[method=GET]:bg-green-600 data-[method=GET]:border-green-600 data-[method=POST]:bg-blue-600 data-[method=POST]:border-blue-600 data-[method=PUT]:bg-amber-600 data-[method=PUT]:border-amber-600 data-[method=PATCH]:bg-purple-600 data-[method=PATCH]:border-purple-600 data-[method=DELETE]:bg-red-600 data-[method=DELETE]:border-red-600" [attr.data-method]="method()" (change)="method.set(asMethod($event))">
+		<select class="py-2 px-2 border rounded text-[0.85rem] font-semibold cursor-pointer text-center text-white min-w-[5.5rem] h-[2.15rem] box-border bg-gray-600 border-gray-600 data-[method=GET]:bg-green-600 data-[method=GET]:border-green-600 data-[method=POST]:bg-blue-600 data-[method=POST]:border-blue-600 data-[method=PUT]:bg-amber-600 data-[method=PUT]:border-amber-600 data-[method=PATCH]:bg-purple-600 data-[method=PATCH]:border-purple-600 data-[method=DELETE]:bg-red-600 data-[method=DELETE]:border-red-600" [attr.data-method]="method()" (change)="method.set(asMethod($event))">
 			@for (m of methods; track m) {
 				<option class="bg-white text-gray-700" [value]="m" [selected]="m === method()">{{ m }}</option>
 			}

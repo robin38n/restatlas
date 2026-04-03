@@ -50,3 +50,6 @@ notes/
 # Logs
 *.log
 npm-debug.log*
+
+# Playwright
+.playwright-mcp/

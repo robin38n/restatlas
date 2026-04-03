@@ -23,14 +23,19 @@ import {
 	SCHEMA_STROKE,
 } from "../../../shared/constants/edge-styles";
 import { METHOD_COLORS } from "../../../shared/constants/method-colors";
+import { truncateLabel } from "../../../shared/utils/truncate-label";
 import { GraphControlsComponent } from "./graph-controls.component";
 import { GraphLegendComponent } from "./graph-legend.component";
+
+const MAX_ENDPOINT_W = 280;
+const MAX_SCHEMA_W = 200;
 
 /** Mutable copy of GraphNode for D3 force simulation (adds x, y, vx, vy). */
 interface SimNode extends d3.SimulationNodeDatum {
 	id: string;
 	type: "endpoint" | "schema";
 	label: string;
+	fullLabel: string;
 	sublabel: string;
 	method?: string;
 	width: number;
@@ -115,14 +120,18 @@ export class GraphCanvasForceComponent {
 		const nodes: SimNode[] = graph.nodes.map((n) => {
 			if (n.type === "endpoint") {
 				const ep = n as EndpointNode;
-				const label = `${ep.method} ${ep.path}`;
+				const fullLabel = `${ep.method} ${ep.path}`;
 				return {
 					id: n.id,
 					type: "endpoint" as const,
-					label,
+					label: truncateLabel(fullLabel, MAX_ENDPOINT_W, 7.5),
+					fullLabel,
 					sublabel: ep.summary || "",
 					method: ep.method,
-					width: Math.max(140, label.length * 7.5 + 24),
+					width: Math.min(
+						MAX_ENDPOINT_W,
+						Math.max(140, fullLabel.length * 7.5 + 24),
+					),
 					height: 40,
 					original: n,
 				};
@@ -131,9 +140,10 @@ export class GraphCanvasForceComponent {
 			return {
 				id: n.id,
 				type: "schema" as const,
-				label: sc.name,
+				label: truncateLabel(sc.name, MAX_SCHEMA_W, 8),
+				fullLabel: sc.name,
 				sublabel: "",
-				width: Math.max(120, sc.name.length * 8 + 24),
+				width: Math.min(MAX_SCHEMA_W, Math.max(120, sc.name.length * 8 + 24)),
 				height: 30,
 				original: n,
 			};
@@ -270,6 +280,12 @@ export class GraphCanvasForceComponent {
 			.attr("font-family", "monospace")
 			.attr("font-weight", 600);
 
+		// Tooltip for truncated endpoint labels
+		nodeGroup
+			.filter((d) => d.type === "endpoint" && d.label !== d.fullLabel)
+			.append("title")
+			.text((d) => d.fullLabel);
+
 		// Schema rectangles (UML class style)
 		const schemaNodes = nodeGroup.filter((d) => d.type === "schema");
 
@@ -295,6 +311,12 @@ export class GraphCanvasForceComponent {
 			.attr("fill", "#1e293b")
 			.attr("font-size", 12)
 			.attr("font-weight", 700);
+
+		// Tooltip for truncated schema labels
+		schemaNodes
+			.filter((d) => d.label !== d.fullLabel)
+			.append("title")
+			.text((d) => d.fullLabel);
 
 		// Drag behavior — low alphaTarget to minimize drift of unconnected subgraphs
 		const drag = d3

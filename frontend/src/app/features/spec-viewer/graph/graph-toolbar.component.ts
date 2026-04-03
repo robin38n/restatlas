@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
+import { TagOverflowComponent } from "../../../shared/components/tag-overflow/tag-overflow.component";
 import { SpecGraphService } from "../services/spec-graph.service";
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
@@ -13,6 +14,7 @@ const METHOD_ACTIVE: Record<string, string> = {
 
 @Component({
 	selector: "app-graph-toolbar",
+	imports: [TagOverflowComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	templateUrl: "./graph-toolbar.component.html",
 })
