@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/robin38n/reqviz/backend/internal/parser"
 	"github.com/robin38n/reqviz/backend/internal/store"
 )
 
@@ -44,22 +44,32 @@ func (s *Server) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// UploadSpec accepts a raw OpenAPI spec as JSON, validates it,
+// UploadSpec accepts a raw OpenAPI spec as JSON or YAML, validates it,
 // extracts metadata, stores it, and returns a SpecSummary.
 func (s *Server) UploadSpec(w http.ResponseWriter, r *http.Request) {
-	var raw map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+	body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20)) // 10 MB
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
 
-	summary, err := s.parseAndStoreSpec(raw)
+	// Detect format from body content — more reliable than Content-Type
+	// which may be altered by proxies or browser defaults.
+	format := detectFormat(body)
+
+	var result *parser.ParseResult
+	if format == "JSON" {
+		result, err = parser.FromJSON(body)
+	} else {
+		result, err = parser.FromYAML(body)
+	}
+
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, summary)
+	writeJSON(w, http.StatusCreated, s.storeResult(result))
 }
 
 // GetSpec retrieves a previously stored spec by ID.
@@ -192,82 +202,61 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// parseAndStoreSpec validates a raw OpenAPI spec, extracts metadata,
-// stores it, and returns a SpecSummary. This is the single shared
-// pipeline used by both UploadSpec and LoadDemo.
+// parseAndStoreSpec validates a raw OpenAPI spec (as a map), extracts
+// metadata, stores it, and returns a SpecSummary. Used by LoadDemo where
+// the spec is already a Go map.
 func (s *Server) parseAndStoreSpec(raw map[string]any) (*SpecSummary, error) {
 	rawBytes, err := json.Marshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process spec")
 	}
 
-	doc, err := openapi3.NewLoader().LoadFromData(rawBytes)
+	result, err := parser.FromJSON(rawBytes)
 	if err != nil {
-		return nil, fmt.Errorf("invalid OpenAPI spec: %w", err)
+		return nil, err
 	}
 
-	title := "Untitled"
-	version := "unknown"
-	if doc.Info != nil {
-		if doc.Info.Title != "" {
-			title = doc.Info.Title
-		}
-		if doc.Info.Version != "" {
-			version = doc.Info.Version
-		}
-	}
+	return s.storeResult(result), nil
+}
 
-	endpointCount := countEndpoints(doc)
-
-	schemaCount := 0
-	if doc.Components != nil {
-		schemaCount = len(doc.Components.Schemas)
-	}
-
-	var tags []string
-	for _, tag := range doc.Tags {
-		tags = append(tags, tag.Name)
-	}
-
+// storeResult persists a ParseResult and returns the corresponding SpecSummary.
+func (s *Server) storeResult(r *parser.ParseResult) *SpecSummary {
 	stored := &store.StoredSpec{
-		Title:         title,
-		Version:       version,
-		EndpointCount: endpointCount,
-		SchemaCount:   schemaCount,
-		Tags:          tags,
-		Raw:           raw,
+		Title:         r.Title,
+		Version:       r.Version,
+		EndpointCount: r.EndpointCount,
+		SchemaCount:   r.SchemaCount,
+		Tags:          r.Tags,
+		Raw:           r.Raw,
 	}
 	id := s.store.Save(stored)
 
 	now := time.Now()
 	return &SpecSummary{
 		Id:            openapi_types.UUID(id),
-		Title:         title,
-		Version:       version,
-		EndpointCount: endpointCount,
-		SchemaCount:   schemaCount,
-		Tags:          &tags,
+		Title:         r.Title,
+		Version:       r.Version,
+		EndpointCount: r.EndpointCount,
+		SchemaCount:   r.SchemaCount,
+		Tags:          &r.Tags,
 		CreatedAt:     &now,
-	}, nil
+	}
 }
 
-// countEndpoints counts all HTTP operations across all paths.
-func countEndpoints(doc *openapi3.T) int {
-	if doc.Paths == nil {
-		return 0
-	}
-	count := 0
-	for _, item := range doc.Paths.Map() {
-		for _, op := range []*openapi3.Operation{
-			item.Get, item.Post, item.Put, item.Patch,
-			item.Delete, item.Head, item.Options,
-		} {
-			if op != nil {
-				count++
-			}
+// detectFormat guesses whether body is JSON or YAML by checking if the
+// trimmed content starts with '{' (JSON object).
+func detectFormat(body []byte) string {
+	for _, b := range body {
+		switch b {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '{':
+			return "JSON"
+		default:
+			return "YAML"
 		}
 	}
-	return count
+	return "YAML"
 }
 
 func flattenHeaders(h http.Header) map[string]string {
@@ -277,7 +266,6 @@ func flattenHeaders(h http.Header) map[string]string {
 	}
 	return flat
 }
-
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")

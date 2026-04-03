@@ -3,6 +3,8 @@ import createClient from "openapi-fetch";
 import type { components, paths } from "./schema";
 
 type ProxyRequestBody = components["schemas"]["ProxyRequest"];
+type SpecSummary = components["schemas"]["SpecSummary"];
+type ValidationError = components["schemas"]["ValidationError"];
 
 @Injectable({ providedIn: "root" })
 export class ApiService {
@@ -10,6 +12,20 @@ export class ApiService {
 
 	uploadSpec(spec: Record<string, unknown>) {
 		return this.client.POST("/specs", { body: spec });
+	}
+
+	async uploadSpecRaw(
+		text: string,
+		contentType: string,
+	): Promise<{ data?: SpecSummary; error?: ValidationError }> {
+		const res = await fetch("/api/specs", {
+			method: "POST",
+			headers: { "Content-Type": contentType },
+			body: text,
+		});
+		const body = await res.json();
+		if (!res.ok) return { error: body };
+		return { data: body };
 	}
 
 	getSpec(id: string) {

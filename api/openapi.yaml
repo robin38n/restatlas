@@ -21,6 +21,10 @@ paths:
               type: object
               additionalProperties: true
               description: Raw OpenAPI spec as JSON
+          application/x-yaml:
+            schema:
+              type: string
+              description: Raw OpenAPI spec as YAML
       responses:
         '201':
           description: Spec uploaded and parsed

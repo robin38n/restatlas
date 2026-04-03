@@ -220,6 +220,7 @@ export interface operations {
                 "application/json": {
                     [key: string]: unknown;
                 };
+                "application/x-yaml": string;
             };
         };
         responses: {

@@ -13,17 +13,21 @@ import type { components } from "../../core/schema";
 type SpecSummary = components["schemas"]["SpecSummary"];
 type DemoInfo = components["schemas"]["DemoInfo"];
 
-const PLACEHOLDER_JSON = `{
+const PLACEHOLDER_SPEC = `Paste a JSON or YAML OpenAPI spec, e.g.:
+
+{
   "openapi": "3.0.3",
-  "info": {
-    "title": "My API",
-    "version": "1.0.0"
-  },
-  "paths": { ... },
-  "components": {
-    "schemas": { ... }
-  }
-}`;
+  "info": { "title": "My API", "version": "1.0.0" },
+  "paths": { ... }
+}
+
+or:
+
+openapi: 3.0.3
+info:
+  title: My API
+  version: 1.0.0
+paths: ...`;
 
 @Component({
 	selector: "app-upload",
@@ -42,7 +46,7 @@ export class UploadComponent {
 	demos = signal<DemoInfo[]>([]);
 	selectedDemoSlug = signal("");
 
-	readonly placeholder = PLACEHOLDER_JSON;
+	readonly placeholder = PLACEHOLDER_SPEC;
 
 	constructor() {
 		this.api.listDemos().then(({ data }) => {
@@ -104,17 +108,19 @@ export class UploadComponent {
 			return;
 		}
 
-		let parsed: Record<string, unknown>;
+		let isJSON = false;
 		try {
-			parsed = JSON.parse(text);
+			JSON.parse(text);
+			isJSON = true;
 		} catch {
-			this.error.set("Invalid JSON. YAML support coming soon.");
-			return;
+			// Not valid JSON — treat as YAML
 		}
+
+		const contentType = isJSON ? "application/json" : "application/x-yaml";
 
 		this.loading.set(true);
 		try {
-			const { data, error } = await this.api.uploadSpec(parsed);
+			const { data, error } = await this.api.uploadSpecRaw(text, contentType);
 			if (error) {
 				this.error.set(error.error ?? "Upload failed");
 			} else if (data) {
