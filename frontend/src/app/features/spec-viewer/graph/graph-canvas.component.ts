@@ -279,7 +279,7 @@ export class GraphCanvasComponent {
 			.join("text")
 			.text((d) => d.label ?? "")
 			.attr("font-size", 9)
-			.attr("fill", "#888")
+			.attr("fill", "var(--graph-text-sub)")
 			.attr("text-anchor", "middle")
 			.attr("dy", -4)
 			.attr("x", (d) => {
@@ -326,7 +326,7 @@ export class GraphCanvasComponent {
 			.attr("y", (d) => d.height / 2)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
-			.attr("fill", "#fff")
+			.attr("fill", "var(--graph-endpoint-text)")
 			.attr("font-size", 11)
 			.attr("font-family", "monospace")
 			.attr("font-weight", 600);
@@ -366,7 +366,7 @@ export class GraphCanvasComponent {
 			.attr("y", 15)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
-			.attr("fill", "#1e293b")
+			.attr("fill", "var(--graph-text)")
 			.attr("font-size", 12)
 			.attr("font-weight", 700);
 
@@ -383,7 +383,7 @@ export class GraphCanvasComponent {
 			.attr("y", 35)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
-			.attr("fill", "#64748b")
+			.attr("fill", "var(--graph-text-sub)")
 			.attr("font-size", 10);
 
 		// Drag without simulation

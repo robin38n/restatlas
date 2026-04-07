@@ -1,129 +1,60 @@
-@if (endpointNode(); as ep) {
-	<div class="text-sm">
-		<!-- URL Bar -->
-		<div class="flex items-center gap-1.5 mb-3">
-			<app-method-badge [method]="ep.method" />
-			<input
-				class="flex-1 py-1.5 px-2 border border-gray-300 rounded font-mono text-xs bg-gray-50 min-w-0 focus:outline-none focus:border-blue-600"
-				[value]="constructedUrl()"
-				readonly
-			/>
-			<button
-				type="button"
-				class="py-1.5 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-[0.8rem] font-semibold shrink-0 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-				(click)="sendRequest()"
-				[disabled]="tryItOut.loading()"
-			>{{ tryItOut.loading() ? 'Sending...' : 'Send' }}</button>
-		</div>
-
-		@if (tryItOut.error()) {
-			<div class="p-2 bg-red-50 text-red-600 rounded text-[0.8rem] mb-2">{{ tryItOut.error() }}</div>
-		}
-
-		<!-- Path Parameters -->
-		@if (pathParams().length > 0) {
-			<div class="mb-3">
-				<h4 class="m-0 mb-1.5 text-xs text-gray-500 uppercase tracking-wide font-semibold">Path Parameters</h4>
-				@for (p of pathParams(); track p.name) {
-					<div class="flex items-center gap-2 mb-1.5">
-						<label class="text-xs font-semibold text-gray-700 min-w-[80px] shrink-0">{{ p.name }} <span class="text-red-600">*</span></label>
-						<input
-							class="flex-1 py-1 px-2 border border-gray-300 rounded font-mono text-[0.8rem] focus:outline-none focus:border-blue-600"
-							[placeholder]="p.schema?.['format'] ?? 'undefined'"
-							[value]="pathValues()[p.name] || ''"
-							(input)="updatePathParam(p.name, $event)"
-						/>
-					</div>
-				}
-			</div>
-		}
-
-		<!-- Query Parameters -->
-		@if (queryParams().length > 0) {
-			<div class="mb-3">
-				<h4 class="m-0 mb-1.5 text-xs text-gray-500 uppercase tracking-wide font-semibold">Query Parameters</h4>
-				@for (p of queryParams(); track p.name) {
-					<div class="flex items-center gap-2 mb-1.5">
-						<label class="text-xs font-semibold text-gray-700 min-w-[80px] shrink-0">
-							{{ p.name }}
-							@if (p.required) { <span class="text-red-600">*</span> }
-						</label>
-						@if (p.enumValues.length > 0) {
-							<select
-								class="flex-1 py-1 px-2 border border-gray-300 rounded font-mono text-[0.8rem] focus:outline-none focus:border-blue-600"
-								(change)="updateQueryParam(p.name, $event)"
-							>
-								<option value="">--</option>
-								@for (v of p.enumValues; track v) {
-									<option [value]="v">{{ v }}</option>
-								}
-							</select>
-						} @else {
-							<input
-								class="flex-1 py-1 px-2 border border-gray-300 rounded font-mono text-[0.8rem] focus:outline-none focus:border-blue-600"
-								placeholder="undefined"
-								[value]="queryValues()[p.name] || ''"
-								(input)="updateQueryParam(p.name, $event)"
-							/>
-						}
-					</div>
-				}
-			</div>
-		}
-
-		<!-- Headers -->
-		@if (headerParams().length > 0) {
-			<div class="mb-3">
-				<h4 class="m-0 mb-1.5 text-xs text-gray-500 uppercase tracking-wide font-semibold">Headers</h4>
-				@for (p of headerParams(); track p.name) {
-					<div class="flex items-center gap-2 mb-1.5">
-						<label class="text-xs font-semibold text-gray-700 min-w-[80px] shrink-0">{{ p.name }}</label>
-						<input
-							class="flex-1 py-1 px-2 border border-gray-300 rounded font-mono text-[0.8rem] focus:outline-none focus:border-blue-600"
-							placeholder="undefined"
-							[value]="headerValues()[p.name] || ''"
-							(input)="updateHeaderParam(p.name, $event)"
-						/>
-					</div>
-				}
-			</div>
-		}
-
-		<!-- Request Body -->
-		@if (requestBodySchema()) {
-			<div class="mb-3">
-				<div class="flex items-center justify-between">
-					<h4 class="m-0 mb-1.5 text-xs text-gray-500 uppercase tracking-wide font-semibold">Request Body</h4>
-					<button
-						type="button"
-						class="bg-transparent border border-gray-300 rounded py-0.5 px-2 text-[0.7rem] text-gray-500 cursor-pointer hover:bg-gray-100"
-						(click)="rawBodyMode.update(v => !v)"
-					>{{ rawBodyMode() ? 'Form' : 'Raw JSON' }}</button>
-				</div>
-				@if (rawBodyMode()) {
-					<textarea
-						class="w-full p-2 border border-gray-300 rounded font-mono text-[0.8rem] box-border focus:outline-none focus:border-blue-600"
-						rows="8"
-						[value]="rawBodyText()"
-						(input)="onRawBodyChange($event)"
-					></textarea>
-				} @else {
-					<app-schema-form
-						[schema]="requestBodySchema()!"
-						[allSchemas]="allSchemas()"
-						[value]="bodyValue()"
-						(valueChange)="bodyValue.set($event)"
-					/>
-				}
-			</div>
-		}
-
-		<!-- Response -->
-		@if (tryItOut.lastResponse()) {
-			<app-response-viewer [response]="tryItOut.lastResponse()!" />
-		}
-
-		<!-- History -->
-		<app-request-history (replayRequest)="onReplayRequest($event)" />
+<div class="space-y-4">
+	<div class="flex items-center gap-2">
+		<input
+			type="text"
+			[value]="url()"
+			(input)="onUrlChange($event)"
+			class="flex-1 py-1.5 px-2 border border-app-border rounded font-mono text-xs bg-app-surface min-w-0 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500/20 text-app-text"
+		/>
+		<button
+			type="button"
+			(click)="sendRequest()"
+			class="py-1.5 px-3 bg-app-primary text-app-text-inv border-none rounded cursor-pointer text-[0.8rem] font-semibold shrink-0 hover:bg-app-primary-hover disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-colors"
+			[disabled]="tryItOut.loading()"
+		>{{ tryItOut.loading() ? '...' : 'Send' }}</button>
 	</div>
-}
+
+	@if (tryItOut.error()) {
+		<div class="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-[0.8rem] mb-2 border border-red-100 dark:border-red-900/30">{{ tryItOut.error() }}</div>
+	}
+
+	@if (parameters().length > 0) {
+		<section>
+			<h4 class="m-0 mb-1.5 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Path Parameters</h4>
+			<div class="space-y-2">
+				@for (p of parameters(); track p.name) {
+					@if (p.in === 'path') {
+						<div class="flex items-center gap-2">
+							<label class="text-xs font-semibold text-app-text min-w-[80px] shrink-0">{{ p.name }} <span class="text-red-600 dark:text-red-400">*</span></label>
+							<input
+								type="text"
+								[value]="pathParams()[p.name] || ''"
+								(input)="updateParam(p.name, $event)"
+								class="flex-1 py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500"
+							/>
+						</div>
+					}
+				}
+			</div>
+		</section>
+	}
+
+	@if (hasSchema(rawOperation()?.['requestBody'])) {
+		<section class="mt-4">
+			<h4 class="m-0 mb-1.5 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Request Body</h4>
+			<div class="border border-app-border rounded p-2 bg-app-bg">
+				<app-schema-form [schema]="getSchema(rawOperation()?.['requestBody'])" (valueChange)="body.set($event)" />
+			</div>
+		</section>
+	}
+
+	@if (tryItOut.lastResponse()) {
+		<div class="mt-4 animate-in fade-in duration-300">
+			<div class="flex items-center justify-between mb-2">
+				<h4 class="m-0 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Response</h4>
+				<button type="button" (click)="tryItOut.clearLastResponse()" class="bg-transparent border-none text-app-text-muted cursor-pointer text-[0.7rem] hover:underline">Clear</button>
+			</div>
+			<app-response-viewer [response]="tryItOut.lastResponse()!" />
+		</div>
+	}
+</div>

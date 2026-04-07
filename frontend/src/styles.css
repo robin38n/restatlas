@@ -1,3 +1,84 @@
-/* You can add global styles to this file, and also import other style files */
-
+/* biome-ignore-all lint/style/noUnknownAtRule: Tailwind 4 syntax */
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Surface Colors */
+  --color-app-bg: var(--bg-app);
+  --color-app-surface: var(--bg-surface);
+  --color-app-surface-hover: var(--bg-surface-hover);
+  --color-app-border: var(--border-base);
+  
+  /* Text Colors */
+  --color-app-text: var(--text-base);
+  --color-app-text-muted: var(--text-muted);
+  --color-app-text-inv: var(--text-inverted);
+  
+  /* Primary Action */
+  --color-app-primary: var(--bg-primary);
+  --color-app-primary-hover: var(--bg-primary-hover);
+}
+
+@layer base {
+  :root {
+    /* Light Mode (Grays) */
+    --bg-app: #ffffff;
+    --bg-surface: #f9fafb;
+    --bg-surface-hover: #f3f4f6;
+    --border-base: #e5e7eb;
+    
+    --text-base: #111827;
+    --text-muted: #6b7280;
+    --text-inverted: #ffffff;
+    
+    --bg-primary: #18181b;
+    --bg-primary-hover: #27272a;
+
+    /* Graph specific aliases for consistency */
+    --graph-text: var(--text-base);
+    --graph-text-sub: var(--text-muted);
+    --graph-edge-req: #2563eb;
+    --graph-edge-res-2xx: #16a34a;
+    --graph-edge-res-4xx: #ef4444;
+    --graph-edge-res-5xx: #991b1b;
+    --graph-edge-param: #6366f1;
+    --graph-edge-prop: #94a3b8;
+    --graph-schema-fill: var(--bg-surface);
+    --graph-schema-stroke: #94a3b8;
+    --graph-endpoint-text: #ffffff;
+    --graph-bg: #fafafa;
+    --graph-border: #e5e7eb;
+  }
+
+  .dark {
+    /* Dark Mode — VS Code Dark Modern (2026) */
+    --bg-app: #1f1f1f;            /* editor background */
+    --bg-surface: #181818;        /* side/activity panel */
+    --bg-surface-hover: #2a2a2a;
+    --border-base: #2b2b2b;       /* subtle panel border */
+
+    --text-base: #cccccc;
+    --text-muted: #9d9d9d;
+    --text-inverted: #1f1f1f;
+
+    --bg-primary: #0078d4;        /* VS Code accent blue */
+    --bg-primary-hover: #1f8ad6;
+
+    /* Graph overrides for dark */
+    --graph-edge-req: #4fc1ff;
+    --graph-edge-res-2xx: #4ade80;
+    --graph-edge-res-4xx: #f87171;
+    --graph-edge-res-5xx: #f87171;
+    --graph-edge-param: #c586c0;
+    --graph-edge-prop: #6a6a6a;
+    --graph-schema-fill: #252526;
+    --graph-schema-stroke: #6a6a6a;
+    --graph-bg: #181818;
+    --graph-border: #2b2b2b;
+  }
+
+  body {
+    @apply bg-app-bg text-app-text transition-colors duration-200;
+  }
+}

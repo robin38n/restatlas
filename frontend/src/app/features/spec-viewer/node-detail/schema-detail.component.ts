@@ -7,7 +7,11 @@ import {
 import { dig } from "../../../core/utils/dig";
 import { asRecord } from "../../../core/utils/record-helpers";
 import { schemaType } from "../../../core/utils/schema-helpers";
-import type { EndpointNode, SchemaNode } from "../../../models/graph.model";
+import type {
+	EndpointNode,
+	GraphNode,
+	SchemaNode,
+} from "../../../models/graph.model";
 import { SpecGraphService } from "../services/spec-graph.service";
 
 @Component({
@@ -16,11 +20,14 @@ import { SpecGraphService } from "../services/spec-graph.service";
 	templateUrl: "./schema-detail.component.html",
 })
 export class SchemaDetailComponent {
-	private readonly svc = inject(SpecGraphService);
+	protected readonly svc = inject(SpecGraphService);
+
+	asSchema(node: GraphNode | null): SchemaNode | null {
+		return node?.type === "schema" ? (node as SchemaNode) : null;
+	}
 
 	readonly schema = computed((): SchemaNode | null => {
-		const node = this.svc.selectedNode();
-		return node?.type === "schema" ? (node as SchemaNode) : null;
+		return this.asSchema(this.svc.selectedNode());
 	});
 
 	private readonly rawSchema = computed(() => {
@@ -37,7 +44,9 @@ export class SchemaDetailComponent {
 		if (!props) return [];
 		const required = Array.isArray(schema.required)
 			? new Set(
-					schema.required.filter((r): r is string => typeof r === "string"),
+					schema.required.filter(
+						(r: unknown): r is string => typeof r === "string",
+					),
 				)
 			: new Set<string>();
 		return Object.entries(props).map(([name, propDef]) => {
@@ -78,7 +87,7 @@ export class SchemaDetailComponent {
 		return results;
 	});
 
-	readonly connectedNodes = computed(() => {
+	readonly connections = computed(() => {
 		const edges = this.svc.selectedNodeEdges();
 		const nodeId = this.svc.selectedNodeId();
 		const g = this.svc.graph();

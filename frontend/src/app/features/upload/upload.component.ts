@@ -9,25 +9,11 @@ import {
 import { RouterLink } from "@angular/router";
 import { ApiService } from "../../core/api.service";
 import type { components } from "../../core/schema";
+import { ThemeService } from "../../core/theme.service";
 
-type SpecSummary = components["schemas"]["SpecSummary"];
+type SpecSummaryRaw = components["schemas"]["SpecSummary"];
+type SpecSummary = SpecSummaryRaw & { endpoints?: number; schemas?: number };
 type DemoInfo = components["schemas"]["DemoInfo"];
-
-const PLACEHOLDER_SPEC = `Paste a JSON or YAML OpenAPI spec, e.g.:
-
-{
-  "openapi": "3.0.3",
-  "info": { "title": "My API", "version": "1.0.0" },
-  "paths": { ... }
-}
-
-or:
-
-openapi: 3.0.3
-info:
-  title: My API
-  version: 1.0.0
-paths: ...`;
 
 @Component({
 	selector: "app-upload",
@@ -37,16 +23,15 @@ paths: ...`;
 })
 export class UploadComponent {
 	private readonly api = inject(ApiService);
-	specInput = viewChild.required<ElementRef<HTMLTextAreaElement>>("specInput");
+	protected readonly theme = inject(ThemeService);
 
-	loading = signal(false);
-	loadingDemo = signal(false);
-	error = signal<string | null>(null);
-	summary = signal<SpecSummary | null>(null);
-	demos = signal<DemoInfo[]>([]);
-	selectedDemoSlug = signal("");
+	readonly input = viewChild.required<ElementRef<HTMLTextAreaElement>>("input");
 
-	readonly placeholder = PLACEHOLDER_SPEC;
+	readonly loading = signal(false);
+	readonly error = signal<string | null>(null);
+	readonly summary = signal<SpecSummary | null>(null);
+	readonly demos = signal<DemoInfo[]>([]);
+	readonly selectedDemoSlug = signal("");
 
 	constructor() {
 		this.api.listDemos().then(({ data }) => {
@@ -56,78 +41,46 @@ export class UploadComponent {
 		});
 	}
 
-	async selectDemo(slug: string) {
-		if (this.selectedDemoSlug() === slug) {
-			this.selectedDemoSlug.set("");
-			this.specInput().nativeElement.value = "";
-			this.autoResize();
-			return;
-		}
-
+	async loadDemo(slug: string) {
 		this.selectedDemoSlug.set(slug);
-		this.loadingDemo.set(true);
-
 		try {
 			const { data } = await this.api.getDemoSpec(slug);
 			if (data) {
-				const text = JSON.stringify(data, null, 2);
-				this.specInput().nativeElement.value = text;
-				this.autoResize();
+				this.input().nativeElement.value = JSON.stringify(data, null, 2);
 			}
 		} catch {
-			this.error.set("Failed to load example spec");
-		} finally {
-			this.loadingDemo.set(false);
+			this.error.set("Failed to load demo");
 		}
 	}
 
-	async onFileSelect(event: Event) {
+	async onFileSelected(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (!file) return;
-
-		const text = await file.text();
-		this.specInput().nativeElement.value = text;
-		this.selectedDemoSlug.set("");
-		this.autoResize();
+		this.input().nativeElement.value = await file.text();
 	}
 
-	autoResize(): void {
-		const el = this.specInput().nativeElement;
-		el.style.height = "auto";
-		el.style.height = `${Math.min(el.scrollHeight, 500)}px`;
-	}
-
-	async submit() {
+	async visualize() {
 		this.error.set(null);
-		this.summary.set(null);
-
-		const text = this.specInput().nativeElement.value.trim();
-		if (!text) {
-			this.error.set("Please paste or upload an OpenAPI spec");
-			return;
-		}
-
-		let isJSON = false;
-		try {
-			JSON.parse(text);
-			isJSON = true;
-		} catch {
-			// Not valid JSON — treat as YAML
-		}
-
-		const contentType = isJSON ? "application/json" : "application/x-yaml";
+		const text = this.input().nativeElement.value.trim();
+		if (!text) return;
 
 		this.loading.set(true);
 		try {
-			const { data, error } = await this.api.uploadSpecRaw(text, contentType);
+			const { data, error } = await this.api.uploadSpecRaw(
+				text,
+				text.startsWith("{") ? "application/json" : "application/x-yaml",
+			);
 			if (error) {
-				this.error.set(error.error ?? "Upload failed");
+				this.error.set(error.error || "Upload failed");
 			} else if (data) {
-				this.summary.set(data);
+				const s = data as SpecSummary;
+				s.endpoints = data.endpointCount;
+				s.schemas = data.schemaCount;
+				this.summary.set(s);
 			}
 		} catch {
-			this.error.set("Network error — is the backend running?");
+			this.error.set("Network error");
 		} finally {
 			this.loading.set(false);
 		}

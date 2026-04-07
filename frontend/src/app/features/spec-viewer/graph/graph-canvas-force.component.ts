@@ -239,7 +239,7 @@ export class GraphCanvasForceComponent {
 			.join("text")
 			.text((d) => d.label ?? "")
 			.attr("font-size", 9)
-			.attr("fill", "#888")
+			.attr("fill", "var(--graph-text-sub)")
 			.attr("text-anchor", "middle")
 			.attr("dy", -4);
 
@@ -275,7 +275,7 @@ export class GraphCanvasForceComponent {
 			.attr("y", (d) => nodeHeight(d) / 2)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
-			.attr("fill", "#fff")
+			.attr("fill", "var(--graph-endpoint-text)")
 			.attr("font-size", 11)
 			.attr("font-family", "monospace")
 			.attr("font-weight", 600);
@@ -308,7 +308,7 @@ export class GraphCanvasForceComponent {
 			.attr("y", (d) => nodeHeight(d) / 2)
 			.attr("text-anchor", "middle")
 			.attr("dominant-baseline", "central")
-			.attr("fill", "#1e293b")
+			.attr("fill", "var(--graph-text)")
 			.attr("font-size", 12)
 			.attr("font-weight", 700);
 

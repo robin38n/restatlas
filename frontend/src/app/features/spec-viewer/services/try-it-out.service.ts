@@ -82,4 +82,8 @@ export class TryItOutService {
 		this.history.set([]);
 		this.selectedHistoryIndex.set(null);
 	}
+
+	clearLastResponse(): void {
+		this.lastResponse.set(null);
+	}
 }

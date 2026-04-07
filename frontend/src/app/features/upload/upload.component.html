@@ -1,59 +1,74 @@
-<div class="max-w-[700px] mx-auto mt-12 px-4">
-	<h1 class="text-3xl font-bold mb-1">Visual OpenAPI Explorer</h1>
-	<p class="text-gray-600 text-sm mb-6 leading-relaxed">Paste a spec or upload a file to visualize your API as an interactive graph.</p>
+<div class="max-w-[800px] mx-auto mt-12 px-4">
+	<h1 class="text-3xl font-bold mb-2">Visual OpenAPI Explorer</h1>
+	<p class="text-app-text-muted text-sm mb-6 leading-relaxed">Paste a spec or upload a file to visualize your API as an interactive graph.</p>
 
-	<div class="border border-gray-300 rounded-md overflow-hidden">
-		<div class="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-			@if (demos().length > 0) {
-				<span class="text-xs text-gray-500 shrink-0">Examples:</span>
+	<div class="grid grid-cols-[1fr_240px] gap-6 items-start">
+		<!-- Left: Editor/Input -->
+		<div class="flex flex-col gap-4">
+			<div class="flex items-center flex-wrap gap-1.5 px-2 py-1.5 bg-app-surface border border-app-border rounded">
+				<span class="text-xs text-app-text-muted shrink-0">Examples:</span>
 				@for (d of demos(); track d.slug) {
 					<button
 						type="button"
-						class="text-xs py-0.5 px-2 border rounded-xl cursor-pointer transition-all"
-						[class]="selectedDemoSlug() === d.slug ? 'bg-slate-800 text-white border-slate-800' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 hover:border-gray-400'"
-						(click)="selectDemo(d.slug)"
-						[disabled]="loadingDemo()"
+						class="px-2 py-0.5 rounded text-[0.7rem] font-medium border transition-colors cursor-pointer"
+						[class]="selectedDemoSlug() === d.slug ? 'bg-app-primary text-app-text-inv border-app-primary' : 'border-app-border bg-app-bg text-app-text hover:bg-app-surface-hover hover:border-app-text-muted/30'"
+						(click)="loadDemo(d.slug)"
 					>{{ d.title }}</button>
 				}
+			</div>
+			<textarea
+				#input
+				class="w-full h-[400px] p-4 font-mono text-xs border border-app-border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none bg-app-bg text-app-text"
+				placeholder="Paste a JSON or YAML OpenAPI spec, e.g.:
+
+{
+  &quot;openapi&quot;: &quot;3.0.3&quot;,
+  &quot;info&quot;: { &quot;title&quot;: &quot;My API&quot;, &quot;version&quot;: &quot;1.0.0&quot; },
+  &quot;paths&quot;: { ... }
+}
+
+or:
+
+openapi: 3.0.3
+info:
+  title: My API
+  version: 1.0.0
+paths: ..."
+			></textarea>
+		</div>
+
+		<!-- Right: Actions -->
+		<div class="flex flex-col gap-3">
+			<label class="inline-flex items-center gap-1.5 py-2 px-4 border border-app-border rounded cursor-pointer bg-app-bg text-app-text text-sm hover:bg-app-surface-hover">
+				<img src="assets/icons/reqviz.svg" [class.invert]="theme.isDark()" alt="" class="size-4 opacity-70" />
+				<span>Upload file</span>
+				<input type="file" class="hidden" (change)="onFileSelected($event)" accept=".json,.yaml,.yml" />
+			</label>
+
+			<button
+				type="button"
+				(click)="visualize()"
+				class="inline-flex items-center gap-1.5 py-2 px-4 border border-app-primary rounded cursor-pointer bg-app-primary text-app-text-inv text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+				[disabled]="loading()"
+			>
+				<img src="assets/icons/reqviz.svg" [class.invert]="!theme.isDark()" alt="" class="size-4" />
+				<span>{{ loading() ? 'Processing...' : 'Visualize' }}</span>
+			</button>
+
+			@if (error()) {
+				<div class="mt-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm border border-red-100 dark:border-red-900/50">{{ error() }}</div>
+			}
+
+			@if (summary(); as s) {
+				<div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-900/50 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+					<h2 class="m-0 text-lg font-bold text-green-800 dark:text-green-300">{{ s.title }} <span class="text-green-600/70 dark:text-green-400/50 text-sm font-normal">v{{ s.version }}</span></h2>
+					<div class="flex gap-4 mt-2 text-green-700 dark:text-green-400 text-sm">
+						<span><strong>{{ s.endpoints }}</strong> endpoints</span>
+						<span><strong>{{ s.schemas }}</strong> schemas</span>
+					</div>
+					<a [routerLink]="['/specs', s.id]" class="inline-block mt-3 py-2 px-4 bg-green-600 text-white rounded no-underline text-sm font-semibold hover:bg-green-700 shadow-sm transition-all transform hover:-translate-y-px active:translate-y-0">View Graph &rarr;</a>
+				</div>
 			}
 		</div>
-		<textarea
-			#specInput
-			class="w-full min-h-[360px] max-h-[500px] font-mono text-sm p-3 border-none outline-none resize-none leading-relaxed box-border"
-			[placeholder]="placeholder"
-			(input)="autoResize()"
-		></textarea>
 	</div>
-
-	<div class="flex gap-3 mt-3">
-		<label class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-300 rounded cursor-pointer bg-white text-gray-800 text-sm hover:bg-gray-50">
-			<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/><polyline points="5 6 8 3 11 6"/><line x1="8" y1="3" x2="8" y2="11"/></svg>
-			Upload file
-			<input type="file" accept=".json,.yaml,.yml" (change)="onFileSelect($event)" hidden />
-		</label>
-		<button
-			type="button"
-			class="inline-flex items-center gap-1.5 py-2 px-4 border border-gray-800 rounded cursor-pointer bg-gray-800 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-			(click)="submit()"
-			[disabled]="loading()"
-		>
-			<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
-			{{ loading() ? 'Analyzing...' : 'Visualize' }}
-		</button>
-	</div>
-
-	@if (error()) {
-		<div class="mt-4 p-3 bg-red-50 text-red-600 rounded">{{ error() }}</div>
-	}
-
-	@if (summary(); as s) {
-		<div class="mt-4 p-4 bg-green-50 rounded-md border border-green-200">
-			<h2 class="m-0 text-lg font-bold">{{ s.title }} <span class="text-gray-500 text-sm font-normal">v{{ s.version }}</span></h2>
-			<div class="flex gap-4 mt-2 text-gray-600 text-sm">
-				<span>{{ s.endpointCount }} endpoints</span>
-				<span>{{ s.schemaCount }} schemas</span>
-			</div>
-			<a [routerLink]="['/specs', s.id]" class="inline-block mt-3 py-2 px-4 bg-gray-800 text-white rounded no-underline text-sm hover:bg-gray-600">View Graph &rarr;</a>
-		</div>
-	}
 </div>

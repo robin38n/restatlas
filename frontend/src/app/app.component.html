@@ -1,13 +1,29 @@
-<nav class="flex items-center px-4 py-2 border-b border-gray-200 bg-white">
-	<a routerLink="/" class="flex items-center gap-2 no-underline text-gray-900">
-		<img src="assets/icons/reqviz.svg" alt="" class="size-6" />
+<nav class="flex items-center px-4 py-2 border-b border-app-border bg-app-bg">
+	<a routerLink="/" class="flex items-center gap-2 no-underline text-app-text">
+		<img [src]="theme.isDark() ? 'assets/icons/reqviz-white.svg' : 'assets/icons/reqviz.svg'" alt="" class="size-6" />
 		<span class="font-bold text-lg">ReqViz</span>
 	</a>
 	<div class="flex items-center gap-4 ml-auto">
-		<a routerLink="/" routerLinkActive="!text-gray-900 !font-semibold" [routerLinkActiveOptions]="{ exact: true }"
-			class="text-sm text-gray-500 no-underline px-2 py-1 rounded transition-colors hover:text-gray-900 hover:bg-gray-100">Explorer</a>
-		<a routerLink="/api-client" routerLinkActive="!text-gray-900 !font-semibold"
-			class="text-sm text-gray-500 no-underline px-2 py-1 rounded transition-colors hover:text-gray-900 hover:bg-gray-100">API Client</a>
+		<a routerLink="/" routerLinkActive="!text-app-text !font-semibold" [routerLinkActiveOptions]="{ exact: true }"
+			class="text-sm text-app-text-muted no-underline px-2 py-1 rounded transition-colors hover:text-app-text hover:bg-app-surface-hover">Explorer</a>
+		<a routerLink="/api-client" routerLinkActive="!text-app-text !font-semibold"
+			class="text-sm text-app-text-muted no-underline px-2 py-1 rounded transition-colors hover:text-app-text hover:bg-app-surface-hover">API Client</a>
+		
+		<button type="button" (click)="theme.toggleTheme()" 
+			class="p-2 rounded-lg bg-transparent hover:bg-app-surface-hover text-app-text-muted transition-colors cursor-pointer"
+			[title]="theme.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+			@if (theme.isDark()) {
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<title>Sun icon</title>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+				</svg>
+			} @else {
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<title>Moon icon</title>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+				</svg>
+			}
+		</button>
 	</div>
 </nav>
 <router-outlet />

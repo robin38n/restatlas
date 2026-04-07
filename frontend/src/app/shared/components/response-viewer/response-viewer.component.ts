@@ -1,3 +1,4 @@
+import { KeyValuePipe } from "@angular/common";
 import {
 	ChangeDetectionStrategy,
 	Component,
@@ -10,12 +11,13 @@ import { StatusBadgeComponent } from "../status-badge/status-badge.component";
 
 @Component({
 	selector: "app-response-viewer",
-	imports: [StatusBadgeComponent],
+	imports: [StatusBadgeComponent, KeyValuePipe],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	templateUrl: "./response-viewer.component.html",
 })
 export class ResponseViewerComponent {
 	readonly response = input.required<ProxyResponse>();
+	readonly showHeaders = signal(false);
 
 	readonly formattedBody = computed(() => {
 		const body = this.response().body;
@@ -23,10 +25,4 @@ export class ResponseViewerComponent {
 		if (typeof body === "string") return body;
 		return JSON.stringify(body, null, 2);
 	});
-
-	readonly headerEntries = computed(() =>
-		Object.entries(this.response().headers),
-	);
-
-	readonly headersExpanded = signal(false);
 }

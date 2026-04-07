@@ -1,31 +1,35 @@
-<div class="mt-3 border-t border-gray-200 pt-3">
+<div class="mt-4 animate-in fade-in duration-300">
 	<div class="flex items-center gap-2 mb-2">
-		<app-status-badge [status]="response().status" size="base" />
-		@if (response().durationMs != null) {
-			<span class="text-xs text-gray-500">{{ response().durationMs }}ms</span>
-		}
+		<app-status-badge [status]="response().status" />
+		<span class="text-xs text-app-text-muted">{{ response().durationMs }}ms</span>
 	</div>
 
-	<button
-		type="button"
-		class="bg-transparent border-none cursor-pointer text-xs text-gray-500 py-1 flex items-center gap-1.5 hover:text-gray-700"
-		(click)="headersExpanded.update(v => !v)"
-	>
-		Headers ({{ headerEntries().length }})
-		<span>{{ headersExpanded() ? '\u25B2' : '\u25BC' }}</span>
-	</button>
-	@if (headersExpanded()) {
-		<div class="bg-gray-50 rounded p-2 mb-2 text-[0.7rem]">
-			@for (h of headerEntries(); track h[0]) {
-				<div class="flex gap-1.5 py-px">
-					<span class="font-semibold text-gray-700 shrink-0">{{ h[0] }}:</span>
-					<span class="text-gray-500 break-all">{{ h[1] }}</span>
-				</div>
-			}
-		</div>
+	@if (response().headers && (response().headers | keyvalue).length > 0) {
+		<button 
+			type="button" 
+			class="bg-transparent border-none cursor-pointer text-xs text-app-text-muted py-1 flex items-center gap-1.5 hover:text-app-text transition-colors"
+			(click)="showHeaders.set(!showHeaders())"
+		>
+			<svg class="w-3 h-3 transition-transform" [class.rotate-90]="showHeaders()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<title>Chevron icon</title>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+			</svg>
+			{{ showHeaders() ? 'Hide' : 'Show' }} Headers
+		</button>
+
+		@if (showHeaders()) {
+			<div class="bg-app-surface border border-app-border rounded p-2 mb-2 text-[0.7rem] space-y-1 animate-in slide-in-from-top-1 duration-200">
+				@for (h of response().headers | keyvalue; track h.key) {
+					<div class="flex gap-2">
+						<span class="font-semibold text-app-text shrink-0">{{ h.key }}:</span>
+						<span class="text-app-text-muted break-all">{{ h.value }}</span>
+					</div>
+				}
+			</div>
+		}
 	}
 
-	@if (formattedBody()) {
-		<pre class="whitespace-pre-wrap break-all font-mono text-xs bg-slate-50 border border-gray-200 rounded p-3 max-h-[400px] overflow-y-auto mt-2 mb-0"><code>{{ formattedBody() }}</code></pre>
+	@if (response().body) {
+		<pre class="whitespace-pre-wrap break-all font-mono text-xs bg-app-surface border border-app-border text-app-text rounded p-3 max-h-[400px] overflow-y-auto mt-2 mb-0 shadow-inner"><code>{{ formattedBody() }}</code></pre>
 	}
 </div>

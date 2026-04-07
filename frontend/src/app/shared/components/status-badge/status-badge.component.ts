@@ -7,47 +7,38 @@ import {
 
 @Component({
 	selector: "app-status-badge",
+	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	template: `<span
-		class="font-semibold font-mono rounded-sm shrink-0 inline-block"
-		[class]="colorClass()"
-	>{{ displayText() }}</span>`,
-	host: { class: "contents" },
+	template: `
+    <span class="px-1.5 py-0.5 rounded-full text-[0.65rem] font-bold border transition-colors" [class]="classes()">
+      {{ status() }}
+    </span>
+  `,
 })
 export class StatusBadgeComponent {
-	readonly status = input.required<string | number>();
-	readonly size = input<"xs" | "sm" | "base">("sm");
+	readonly status = input.required<number>();
+	readonly size = input<"xs" | "sm">("xs");
 
-	readonly displayText = computed(() => {
+	protected readonly classes = computed(() => {
 		const s = this.status();
-		return s === 0 || s === "0" ? "ERR" : String(s);
-	});
+		let color = "";
 
-	readonly colorClass = computed(() => {
-		const group = String(this.status()).charAt(0);
-		const sizeMap = {
-			xs: "text-[0.65rem] py-0.5 px-1",
-			sm: "text-xs py-px px-1",
-			base: "text-[0.8rem] py-0.5 px-2",
-		};
-		let color: string;
-		switch (group) {
-			case "2":
-				color = "bg-green-100 text-green-800";
-				break;
-			case "3":
-				color = "bg-blue-100 text-blue-800";
-				break;
-			case "4":
-				color = "bg-amber-100 text-amber-800";
-				break;
-			case "5":
-				color = "bg-red-50 text-red-800";
-				break;
-			default:
-				color = "bg-gray-100 text-gray-500";
-				break;
+		if (s >= 200 && s < 300) {
+			color =
+				"bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800/50";
+		} else if (s >= 300 && s < 400) {
+			color =
+				"bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50";
+		} else if (s >= 400 && s < 500) {
+			color =
+				"bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50";
+		} else if (s >= 500) {
+			color =
+				"bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800/50";
+		} else {
+			color = "bg-app-surface text-app-text-muted border-app-border";
 		}
-		return `${color} ${sizeMap[this.size()]}`;
+
+		return color;
 	});
 }

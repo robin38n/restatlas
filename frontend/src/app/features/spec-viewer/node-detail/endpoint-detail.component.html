@@ -1,114 +1,117 @@
-@if (endpoint(); as ep) {
-	<div class="flex items-center gap-2">
-		<app-method-badge [method]="ep.method" size="base" />
-		<span class="font-mono font-medium">{{ ep.path }}</span>
-	</div>
-	@if (ep.summary) {
-		<p class="text-gray-500 my-1 text-[0.8rem]">{{ ep.summary }}</p>
-	}
-	@if (ep.operationId) {
-		<p class="text-gray-400 text-xs my-1">operationId: <code class="bg-gray-100 px-1 py-px rounded-sm">{{ ep.operationId }}</code></p>
-	}
-	@if (ep.tags.length > 0) {
-		<div class="flex gap-1 flex-wrap mt-1 mb-3">
-			@for (tag of ep.tags; track tag) {
-				<span class="bg-indigo-100 text-indigo-800 py-px px-1.5 rounded-sm text-[0.7rem]">{{ tag }}</span>
-			}
+@if (svc.selectedNode(); as node) {
+	@if (asEndpoint(node); as ep) {
+		<div class="flex items-center gap-3 mb-4">
+			<app-method-badge [method]="ep.method" size="lg" />
+			<h3 class="m-0 text-lg font-mono break-all text-app-text">{{ ep.path }}</h3>
 		</div>
+
+		<p class="text-app-text-muted my-1 text-[0.8rem]">{{ ep.summary }}</p>
+		<p class="text-app-text-muted text-xs my-1">operationId: <code class="bg-app-surface border border-app-border px-1 py-px rounded-sm text-app-text">{{ ep.operationId }}</code></p>
+
+		@if (ep.tags && ep.tags.length > 0) {
+			<div class="flex flex-wrap gap-1 mt-2 mb-4">
+				@for (tag of ep.tags; track tag) {
+					<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 py-px px-1.5 rounded-sm text-[0.7rem] border border-blue-200 dark:border-blue-800/50">{{ tag }}</span>
+				}
+			</div>
+		}
+
+		<div class="inline-flex w-full p-0.5 mb-4 rounded-lg bg-app-surface border border-app-border">
+			<button
+				type="button"
+				class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md border-none cursor-pointer transition-all"
+				[class]="activeTab() === 'details' ? 'bg-app-bg text-app-text shadow-sm' : 'bg-transparent text-app-text-muted hover:text-app-text'"
+				(click)="activeTab.set('details')"
+			>Details</button>
+			<button
+				type="button"
+				class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md border-none cursor-pointer transition-all"
+				[class]="activeTab() === 'try-it' ? 'bg-app-bg text-app-text shadow-sm' : 'bg-transparent text-app-text-muted hover:text-app-text'"
+				(click)="activeTab.set('try-it')"
+			>Try It Out</button>
+		</div>
+
+		@if (activeTab() === 'details') {
+			<div class="space-y-6 animate-in fade-in duration-200">
+				@if (endpointParams() && endpointParams().length > 0) {
+					<section>
+						<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Parameters</h4>
+						<div class="border border-app-border rounded overflow-hidden">
+							<table class="w-full text-xs border-collapse">
+								<thead class="bg-app-surface">
+									<tr>
+										<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Name</th>
+										<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">In</th>
+										<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Type</th>
+										<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Required</th>
+									</tr>
+								</thead>
+								<tbody class="text-app-text">
+									@for (p of endpointParams(); track p.name) {
+										<tr>
+											<td class="py-1 px-1.5 border-b border-app-border font-mono">{{ p.name }}</td>
+											<td class="py-1 px-1.5 border-b border-app-border text-app-text-muted">{{ p.in }}</td>
+											<td class="py-1 px-1.5 border-b border-app-border text-app-text-muted">{{ p.type }}</td>
+											<td class="py-1 px-1.5 border-b border-app-border text-app-text-muted">{{ p.required ? 'Yes' : 'No' }}</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				}
+
+				@if (requestBodySchemas()) {
+					<section>
+						<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Request Body</h4>
+						@for (ref of requestBodySchemas()!.refs; track ref) {
+							<button type="button" class="bg-app-surface border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(ref)">{{ ref }}</button>
+						}
+					</section>
+				}
+
+				@if (responseEntries() && responseEntries().length > 0) {
+					<section>
+						<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Responses</h4>
+						<div class="space-y-2">
+							@for (r of responseEntries(); track r.code) {
+								<div class="flex items-start gap-2">
+									<span class="font-bold text-xs min-w-[30px] mt-0.5 text-app-text">{{ r.code }}</span>
+									<div class="flex-1">
+										<span class="text-app-text-muted text-xs block mb-1">{{ r.description }}</span>
+										@for (ref of r.refs; track ref) {
+											<button type="button" class="bg-app-surface border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(ref)">{{ ref }}</button>
+										}
+									</div>
+								</div>
+							}
+						</div>
+					</section>
+				}
+
+				@if (connections().length > 0) {
+					<section>
+						<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Connected Schemas</h4>
+						<div class="flex flex-col gap-1.5">
+							@for (c of connections(); track c.id) {
+								<div class="flex items-center gap-2 text-xs">
+									<span class="font-mono text-[0.65rem] py-px px-1 bg-app-surface border border-app-border rounded-sm text-app-text-muted">{{ c.kind }}</span>
+									<button type="button" class="bg-transparent border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(c.id)">{{ c.label }}</button>
+									@if (c.edgeLabel) {
+										<span class="text-app-text-muted text-[0.7rem]">{{ c.edgeLabel }}</span>
+									}
+								</div>
+							}
+						</div>
+					</section>
+				}
+			</div>
+		} @else {
+			<div class="animate-in fade-in duration-200">
+				<app-try-it-out [endpoint]="ep" />
+				<app-request-history [collapsible]="true" [filterMethod]="ep.method" [filterPath]="ep.path" />
+			</div>
+		}
+
 	}
-
-	<div class="flex border border-gray-200 rounded-md overflow-hidden mb-3">
-		<button
-			type="button"
-			class="flex-1 py-1.5 text-[0.8rem] border-none cursor-pointer transition-colors"
-			[class]="activeTab() === 'details' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
-			(click)="activeTab.set('details')"
-		>Details</button>
-		<button
-			type="button"
-			class="flex-1 py-1.5 text-[0.8rem] border-none border-l border-gray-200 cursor-pointer transition-colors"
-			[class]="activeTab() === 'try-it' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
-			(click)="activeTab.set('try-it')"
-		>Try It Out</button>
-	</div>
-
-	<div [hidden]="activeTab() !== 'details'">
-		<!-- Parameters -->
-		@if (endpointParams().length > 0) {
-			<section class="mt-3 pt-3 border-t border-gray-100">
-				<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Parameters</h4>
-				<table class="w-full border-collapse text-[0.8rem]">
-					<thead>
-						<tr>
-							<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Name</th>
-							<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">In</th>
-							<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Type</th>
-							<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Required</th>
-						</tr>
-					</thead>
-					<tbody>
-						@for (p of endpointParams(); track p.name) {
-							<tr>
-								<td class="py-1 px-1.5 border-b border-gray-100"><code>{{ p.name }}</code></td>
-								<td class="py-1 px-1.5 border-b border-gray-100">{{ p.in }}</td>
-								<td class="py-1 px-1.5 border-b border-gray-100">{{ p.type }}</td>
-								<td class="py-1 px-1.5 border-b border-gray-100">{{ p.required ? 'Yes' : '' }}</td>
-							</tr>
-						}
-					</tbody>
-				</table>
-			</section>
-		}
-
-		<!-- Request Body -->
-		@if (requestBodySchemas().length > 0) {
-			<section class="mt-3 pt-3 border-t border-gray-100">
-				<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Request Body</h4>
-				@for (ref of requestBodySchemas(); track ref) {
-					<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
-				}
-			</section>
-		}
-
-		<!-- Responses -->
-		@if (responseEntries().length > 0) {
-			<section class="mt-3 pt-3 border-t border-gray-100">
-				<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Responses</h4>
-				@for (r of responseEntries(); track r.status) {
-					<div class="flex items-center gap-2 mb-1.5 flex-wrap">
-						<app-status-badge [status]="r.status" size="sm" />
-						<span class="text-gray-500 text-xs">{{ r.description }}</span>
-						@for (ref of r.schemas; track ref) {
-							<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(ref)">{{ ref }}</button>
-						}
-					</div>
-				}
-			</section>
-		}
-
-		<!-- Connected Schemas -->
-		@if (connectedNodes().length > 0) {
-			<section class="mt-3 pt-3 border-t border-gray-100">
-				<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Connected Schemas</h4>
-				@for (c of connectedNodes(); track c.id) {
-					<div class="flex items-center gap-1.5 mb-1">
-						<span class="font-mono text-[0.65rem] py-px px-1 bg-gray-100 rounded-sm text-gray-500">{{ c.kind }}</span>
-						<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(c.id)">{{ c.label }}</button>
-						@if (c.edgeLabel) {
-							<span class="text-gray-400 text-[0.7rem]">{{ c.edgeLabel }}</span>
-						}
-					</div>
-				}
-			</section>
-		}
-	</div>
-
-	<div [hidden]="activeTab() !== 'try-it'">
-		<app-try-it-out />
-		<button
-			type="button"
-			class="block mt-3 py-1.5 px-3 bg-transparent border border-gray-300 rounded text-gray-500 text-xs cursor-pointer transition-all hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50"
-			(click)="openInApiClient()"
-		>Open in API Client &rarr;</button>
-	</div>
 }

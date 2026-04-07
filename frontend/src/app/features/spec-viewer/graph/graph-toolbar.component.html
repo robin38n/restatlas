@@ -3,7 +3,7 @@
 	<div class="flex items-center gap-3 flex-wrap">
 		<input
 			type="text"
-			class="py-1.5 px-2.5 border border-gray-300 rounded text-[0.8rem] w-[220px] outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
+			class="py-1.5 px-2.5 border border-app-border rounded text-[0.8rem] w-[220px] outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15 bg-app-bg text-app-text"
 			placeholder="Search endpoints & schemas..."
 			[value]="svc.searchQuery()"
 			(input)="onSearch($event)"
@@ -23,7 +23,7 @@
 		@if (hasActiveFilters()) {
 			<button
 				type="button"
-				class="bg-transparent border-none text-gray-500 text-xs cursor-pointer underline p-1 hover:text-gray-700"
+				class="bg-transparent border-none text-app-text-muted text-xs cursor-pointer underline p-1 hover:text-app-text transition-colors"
 				(click)="svc.clearFilters()"
 			>Clear filters</button>
 		}

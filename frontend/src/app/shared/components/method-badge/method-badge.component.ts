@@ -15,24 +15,31 @@ const METHOD_BG: Record<string, string> = {
 
 @Component({
 	selector: "app-method-badge",
+	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	template: `<span
-		class="font-semibold rounded-sm text-white shrink-0 inline-block"
-		[class]="colorClass()"
-	>{{ method() }}</span>`,
-	host: { class: "contents" },
+	template: `
+    <span 
+      class="inline-flex items-center justify-center font-bold text-white dark:text-zinc-950 rounded-sm leading-none shrink-0"
+      [class]="classes()"
+    >
+      {{ method() }}
+    </span>
+  `,
 })
 export class MethodBadgeComponent {
 	readonly method = input.required<string>();
-	readonly size = input<"xs" | "sm" | "base">("sm");
+	readonly size = input<"xs" | "sm" | "lg">("sm");
 
-	readonly colorClass = computed(() => {
-		const bg = METHOD_BG[this.method()] ?? "bg-gray-500";
-		const sizeMap = {
-			xs: "text-[0.6rem] py-0.5 px-1",
-			sm: "text-[0.7rem] py-0.5 px-1.5",
-			base: "text-xs py-0.5 px-1.5",
-		};
-		return `${bg} ${sizeMap[this.size()]}`;
+	protected readonly classes = computed(() => {
+		const bg = METHOD_BG[this.method()] ?? "bg-zinc-500";
+		const size = this.size();
+
+		let sizeClasses = "text-[0.65rem] px-1 py-1 min-w-[36px] h-[18px]";
+		if (size === "xs")
+			sizeClasses = "text-[0.6rem] px-1 py-0.5 min-w-[30px] h-[16px]";
+		if (size === "lg")
+			sizeClasses = "text-[0.8rem] px-2 py-1 min-w-[48px] h-[24px]";
+
+		return `${bg} ${sizeClasses}`;
 	});
 }

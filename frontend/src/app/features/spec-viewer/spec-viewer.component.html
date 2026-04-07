@@ -1,38 +1,38 @@
 <div class="max-w-[1200px] mx-auto mt-8 px-4 pb-16">
 	@if (svc.loading()) {
-		<p class="text-gray-500">Loading spec...</p>
+		<p class="text-app-text-muted">Loading spec...</p>
 	}
 
 	@if (svc.error(); as err) {
-		<div class="p-6 bg-red-50 text-red-600 rounded text-center">
+		<div class="p-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-center border border-red-100 dark:border-red-900/30">
 			<p class="mb-4">{{ err }}</p>
-			<a routerLink="/" class="inline-block py-2 px-4 bg-gray-800 text-white rounded no-underline text-sm hover:bg-gray-600">Return to start</a>
+			<a routerLink="/" class="inline-block py-2 px-4 bg-app-primary text-app-text-inv rounded no-underline text-sm hover:opacity-90 transition-opacity">Return to start</a>
 		</div>
 	}
 
 	@if (svc.summary(); as s) {
 		<header>
-			<h1 class="mt-2 mb-0 text-2xl font-bold">{{ s.title }} <span class="text-gray-500 text-sm font-normal">v{{ s.version }}</span></h1>
+			<h1 class="mt-2 mb-0 text-2xl font-bold">{{ s.title }} <span class="text-app-text-muted text-sm font-normal">v{{ s.version }}</span></h1>
 			<div class="flex gap-4 mt-2 mb-4">
-				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.endpointNodes().length }} endpoints</span>
-				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.schemaNodes().length }} schemas</span>
-				<span class="py-1 px-2 bg-gray-100 rounded text-sm text-gray-600">{{ svc.edgeCount() }} relationships</span>
+				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.endpointNodes().length }} endpoints</span>
+				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.schemaNodes().length }} schemas</span>
+				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.edgeCount() }} relationships</span>
 			</div>
 		</header>
 
 		<div class="flex items-start justify-between gap-4">
 			<app-graph-toolbar />
-			<div class="flex border border-gray-200 rounded-md overflow-hidden shrink-0">
+			<div class="flex border border-app-border rounded-md overflow-hidden shrink-0">
 				<button
 					type="button"
 					class="py-1.5 px-3 text-[0.8rem] border-none cursor-pointer transition-colors"
-					[class]="layout() === 'structured' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
+					[class]="layout() === 'structured' ? 'bg-app-primary text-app-text-inv' : 'bg-app-bg text-app-text-muted hover:bg-app-surface-hover'"
 					(click)="layout.set('structured')"
 				>Structured</button>
 				<button
 					type="button"
-					class="py-1.5 px-3 text-[0.8rem] border-none border-l border-gray-200 cursor-pointer transition-colors"
-					[class]="layout() === 'interactive' ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-100'"
+					class="py-1.5 px-3 text-[0.8rem] border-none border-l border-app-border cursor-pointer transition-colors"
+					[class]="layout() === 'interactive' ? 'bg-app-primary text-app-text-inv' : 'bg-app-bg text-app-text-muted hover:bg-app-surface-hover'"
 					(click)="layout.set('interactive')"
 				>Interactive</button>
 			</div>
@@ -45,58 +45,58 @@
 				<app-graph-canvas-force [graph]="g" (nodeClick)="onNodeClick($event)" />
 			}
 
-			<div class="grid grid-cols-2 border border-gray-200 rounded-lg mt-6 overflow-hidden bg-white">
+			<div class="grid grid-cols-2 border border-app-border rounded-lg mt-6 overflow-hidden bg-app-bg">
 				<!-- List pane -->
-				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-gray-200">
+				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-app-border">
 					<app-list-toolbar 
 						[activeSort]="listSort()"
 						[sortOptions]="[
-							{ value: 'az', label: 'A \u2192 Z' },
-							{ value: 'za', label: 'Z \u2192 A' },
-							{ value: 'method', label: 'By method' }
+							{ value: 'az', label: 'Asc.' },
+							{ value: 'za', label: 'Desc.' },
+							{ value: 'method', label: 'Method' }
 						]"
 						(searchChange)="listSearch.set($event)"
 						(sortChange)="listSort.set($event)"
 					/>
 					<section>
-						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Endpoints</h2>
+						<h2 class="text-xs font-semibold text-app-text-muted uppercase tracking-wide mb-2">Endpoints</h2>
 						@for (ep of localEndpoints(); track ep.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100 min-w-0"
-								[class.bg-blue-50]="svc.selectedNodeId() === ep.id"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface-hover min-w-0"
+								[class]="svc.selectedNodeId() === ep.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''"
 								(click)="onNodeClick(ep)"
 							>
 								<app-method-badge [method]="ep.method" />
 								<span class="font-mono text-[0.8rem] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{{ ep.path }}</span>
 							</div>
 						} @empty {
-							<p class="text-gray-400 text-sm">No endpoints found</p>
+							<p class="text-app-text-muted text-sm">No endpoints found</p>
 						}
 					</section>
 
 					<section class="mt-4">
-						<h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Schemas</h2>
+						<h2 class="text-xs font-semibold text-app-text-muted uppercase tracking-wide mb-2">Schemas</h2>
 						@for (sc of localSchemas(); track sc.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-gray-100 min-w-0"
-								[class.bg-blue-50]="svc.selectedNodeId() === sc.id"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface-hover min-w-0"
+								[class]="svc.selectedNodeId() === sc.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''"
 								(click)="onNodeClick(sc)"
 							>
 								<strong class="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{{ sc.name }}</strong>
-								<span class="ml-auto text-gray-400 text-xs">{{ sc.properties.length }} props</span>
+								<span class="ml-auto text-app-text-muted text-xs">{{ sc.properties.length }} props</span>
 							</div>
 						} @empty {
-							<p class="text-gray-400 text-sm">No schemas found</p>
+							<p class="text-app-text-muted text-sm">No schemas found</p>
 						}
 					</section>
 				</div>
 
 				<!-- Detail pane -->
-				<div class="p-4 overflow-y-auto max-h-[600px]">
+				<div class="p-4 overflow-y-auto max-h-[600px] bg-app-surface/30">
 					@if (svc.selectedNode()) {
 						<app-node-detail />
 					} @else {
-						<p class="text-gray-400 text-sm mt-8 text-center">Select an endpoint or schema to see details</p>
+						<p class="text-app-text-muted text-sm mt-8 text-center">Select an endpoint or schema to see details</p>
 					}
 				</div>
 			</div>

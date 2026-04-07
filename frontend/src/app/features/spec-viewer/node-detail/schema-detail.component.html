@@ -1,60 +1,70 @@
-@if (schema(); as sc) {
-	<h3 class="m-0 text-base text-slate-800">{{ sc.name }}</h3>
+@if (svc.selectedNode(); as node) {
+	@if (asSchema(node); as sc) {
+		<h3 class="m-0 text-base text-app-text font-bold mb-4">{{ sc.name }}</h3>
 
-	@if (schemaProperties().length > 0) {
-		<section class="mt-3 pt-3 border-t border-gray-100">
-			<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Properties</h4>
-			<table class="w-full border-collapse text-[0.8rem]">
-				<thead>
-					<tr>
-						<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Name</th>
-						<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Type</th>
-						<th class="text-left py-1 px-1.5 border-b border-gray-100 font-semibold text-gray-400 text-[0.7rem] uppercase">Required</th>
-					</tr>
-				</thead>
-				<tbody>
-					@for (p of schemaProperties(); track p.name) {
-						<tr>
-							<td class="py-1 px-1.5 border-b border-gray-100"><code>{{ p.name }}</code></td>
-							<td class="py-1 px-1.5 border-b border-gray-100">
-								@if (p.refTarget) {
-									<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(p.refTarget)">{{ p.type }}</button>
-								} @else {
-									{{ p.type }}
+		<div class="space-y-6">
+			@if (schemaProperties() && schemaProperties().length > 0) {
+				<section>
+					<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Properties</h4>
+					<div class="border border-app-border rounded overflow-hidden bg-app-bg">
+						<table class="w-full text-xs border-collapse">
+							<thead class="bg-app-surface">
+								<tr>
+									<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Name</th>
+									<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Type</th>
+									<th class="text-left py-1 px-1.5 border-b border-app-border font-semibold text-app-text-muted text-[0.7rem] uppercase">Required</th>
+								</tr>
+							</thead>
+							<tbody class="text-app-text">
+								@for (p of schemaProperties(); track p.name) {
+									<tr>
+										<td class="py-1 px-1.5 border-b border-app-border font-mono">{{ p.name }}</td>
+										<td class="py-1 px-1.5 border-b border-app-border text-app-text-muted">
+											@if (p.refTarget) {
+												<button type="button" class="bg-transparent border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(p.refTarget)">{{ p.type }}</button>
+											} @else {
+												{{ p.type }}
+											}
+										</td>
+										<td class="py-1 px-1.5 border-b border-app-border text-app-text-muted">{{ p.required ? 'Yes' : 'No' }}</td>
+									</tr>
 								}
-							</td>
-							<td class="py-1 px-1.5 border-b border-gray-100">{{ p.required ? 'Yes' : '' }}</td>
-						</tr>
-					}
-				</tbody>
-			</table>
-		</section>
-	}
-
-	@if (compositionRefs().length > 0) {
-		<section class="mt-3 pt-3 border-t border-gray-100">
-			<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Composition</h4>
-			@for (c of compositionRefs(); track c.keyword + c.ref) {
-				<div class="flex items-center gap-1.5 mb-1">
-					<span class="font-mono text-[0.7rem] text-red-600">{{ c.keyword }}</span>
-					<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(c.ref)">{{ c.ref }}</button>
-				</div>
+							</tbody>
+						</table>
+					</div>
+				</section>
 			}
-		</section>
-	}
 
-	@if (connectedNodes().length > 0) {
-		<section class="mt-3 pt-3 border-t border-gray-100">
-			<h4 class="m-0 mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Used By</h4>
-			@for (c of connectedNodes(); track c.id) {
-				<div class="flex items-center gap-1.5 mb-1">
-					<span class="font-mono text-[0.65rem] py-px px-1 bg-gray-100 rounded-sm text-gray-500">{{ c.kind }}</span>
-					<button type="button" class="bg-transparent border border-indigo-200 text-blue-600 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-indigo-100" (click)="navigateTo(c.id)">{{ c.label }}</button>
-					@if (c.edgeLabel) {
-						<span class="text-gray-400 text-[0.7rem]">{{ c.edgeLabel }}</span>
-					}
-				</div>
+			@if (compositionRefs() && compositionRefs().length > 0) {
+				<section>
+					<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Composition</h4>
+					<div class="flex flex-col gap-1.5">
+						@for (c of compositionRefs(); track c.ref) {
+							<div class="flex items-center gap-2 text-xs">
+								<span class="font-mono text-[0.7rem] text-red-600 dark:text-red-400 font-bold uppercase">{{ c.keyword }}</span>
+								<button type="button" class="bg-transparent border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(c.ref)">{{ c.ref }}</button>
+							</div>
+						}
+					</div>
+				</section>
 			}
-		</section>
+
+			@if (connections().length > 0) {
+				<section>
+					<h4 class="m-0 mb-2 text-xs font-semibold text-app-text-muted uppercase tracking-wide">Used By</h4>
+					<div class="flex flex-col gap-1.5">
+						@for (c of connections(); track c.id) {
+							<div class="flex items-center gap-2 text-xs">
+								<span class="font-mono text-[0.65rem] py-px px-1 bg-app-surface border border-app-border rounded-sm text-app-text-muted">{{ c.kind }}</span>
+								<button type="button" class="bg-transparent border border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-px px-1.5 rounded-sm text-xs font-mono hover:bg-app-surface-hover" (click)="navigateTo(c.id)">{{ c.label }}</button>
+								@if (c.edgeLabel) {
+									<span class="text-app-text-muted text-[0.7rem]">{{ c.edgeLabel }}</span>
+								}
+							</div>
+						}
+					</div>
+				</section>
+			}
+		</div>
 	}
 }

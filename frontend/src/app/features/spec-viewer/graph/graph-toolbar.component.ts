@@ -5,11 +5,11 @@ import { SpecGraphService } from "../services/spec-graph.service";
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 
 const METHOD_ACTIVE: Record<string, string> = {
-	GET: "bg-green-600 text-white border-green-600",
-	POST: "bg-blue-600 text-white border-blue-600",
-	PUT: "bg-amber-600 text-white border-amber-600",
-	PATCH: "bg-purple-600 text-white border-purple-600",
-	DELETE: "bg-red-600 text-white border-red-600",
+	GET: "bg-green-600 text-white dark:text-zinc-950 border-green-600",
+	POST: "bg-blue-600 text-white dark:text-zinc-950 border-blue-600",
+	PUT: "bg-amber-600 text-white dark:text-zinc-950 border-amber-600",
+	PATCH: "bg-purple-600 text-white dark:text-zinc-950 border-purple-600",
+	DELETE: "bg-red-600 text-white dark:text-zinc-950 border-red-600",
 };
 
 @Component({
@@ -36,9 +36,14 @@ export class GraphToolbarComponent {
 	}
 
 	methodClasses(method: string): string {
-		if (this.svc.selectedMethods().has(method)) {
-			return METHOD_ACTIVE[method] ?? "bg-gray-500 text-white border-gray-500";
+		const selected = this.svc.selectedMethods();
+		const included = selected.size === 0 || selected.has(method);
+		if (included) {
+			return (
+				METHOD_ACTIVE[method] ??
+				"bg-app-text-muted text-app-text-inv border-app-text-muted"
+			);
 		}
-		return "border-gray-200 bg-white text-gray-500 hover:border-gray-400";
+		return "border-app-border bg-app-bg text-app-text-muted opacity-60 hover:opacity-100 transition-all";
 	}
 }

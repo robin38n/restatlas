@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1049 1024" width="1049" height="1024">
-<g transform="translate(0,1024) scale(0.1,-0.1)" fill="#000000" stroke="none">
+<style>
+  .icon-fill { fill: #000000; }
+  @media (prefers-color-scheme: dark) {
+    .icon-fill { fill: #ffffff; }
+  }
+</style>
+<g transform="translate(0,1024) scale(0.1,-0.1)" class="icon-fill" stroke="none">
 <path d="M2681 8269 c-292 -52 -528 -269 -607 -560 -24 -89 -25 -281 -1 -369
 56 -208 195 -379 388 -480 112 -58 207 -80 347 -80 139 0 215 17 332 72 l85
 41 233 -239 c128 -131 318 -327 422 -435 l189 -195 -64 -90 c-235 -329 -321

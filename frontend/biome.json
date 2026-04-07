@@ -6,7 +6,12 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist", "!!src/app/core/schema.d.ts"]
+		"includes": [
+			"**",
+			"!!**/dist",
+			"!!src/app/core/schema.d.ts",
+			"!!src/styles.css"
+		]
 	},
 	"formatter": {
 		"enabled": true,

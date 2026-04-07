@@ -1,6 +1,6 @@
-<div class="flex gap-0.5 border border-gray-200 rounded-md bg-white/85 backdrop-blur-sm p-0.5">
+<div class="flex gap-0.5 border border-app-border rounded-md bg-app-bg/90 backdrop-blur-sm p-0.5">
 	<button type="button" (click)="zoomIn.emit()" title="Zoom in"
-		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800">
+		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-app-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-text">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<title>Zoom in icon</title>
 			<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -8,7 +8,7 @@
 		</svg>
 	</button>
 	<button type="button" (click)="zoomOut.emit()" title="Zoom out"
-		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800">
+		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-app-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-text">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<title>Zoom out icon</title>
 			<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -16,15 +16,15 @@
 		</svg>
 	</button>
 	<button type="button" (click)="resetZoom.emit()" title="Reset zoom"
-		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800">
+		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-app-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-text">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<title>Reset zoom icon</title>
-			<path d="M3.5 5.5L2 4l1.5-1.5"/><path d="M2 4h4.5a6.5 6.5 0 1 1 0 13H2"/>
+			<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>
 		</svg>
 	</button>
-	<div class="w-px bg-gray-200 my-1 mx-px"></div>
+	<div class="w-px bg-app-border my-1 mx-px"></div>
 	<button type="button" (click)="fullscreen.emit()" title="Fullscreen"
-		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800">
+		class="flex items-center justify-center size-[30px] rounded border-none bg-transparent cursor-pointer text-app-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-text">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<title>Fullscreen icon</title>
 			<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
