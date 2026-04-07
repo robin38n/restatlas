@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,52 +13,35 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/robin38n/reqviz/backend/internal/parser"
+	"github.com/robin38n/reqviz/backend/internal/proxy"
 	"github.com/robin38n/reqviz/backend/internal/store"
 )
 
-const proxyMaxResponseBytes = 5 * 1024 * 1024 // 5 MB
-
-var proxyClient = newSafeProxyClient()
-
-// dangerousOutboundHeaders are stripped from proxied requests to prevent
-// credential leakage and header spoofing.
-var dangerousOutboundHeaders = []string{
-	"Host",
-	"X-Forwarded-For",
-	"X-Forwarded-Host",
-	"X-Forwarded-Proto",
-	"X-Real-Ip",
-	"Cookie",
-	"Set-Cookie",
-}
-
-// Server implements the generated ServerInterface.
 type Server struct {
 	store *store.SpecStore
+	proxy *proxy.Executor
 }
 
 func NewServer(s *store.SpecStore) *Server {
-	return &Server{store: s}
+	return &Server{
+		store: s,
+		proxy: proxy.New(proxy.NewSafeClient(), proxy.NewLimiter(), slog.Default()),
+	}
 }
 
-// HealthCheck returns a simple status response.
 func (s *Server) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// UploadSpec accepts a raw OpenAPI spec as JSON or YAML, validates it,
-// extracts metadata, stores it, and returns a SpecSummary.
+// UploadSpec validates, stores, and returns a SpecSummary for an uploaded OpenAPI spec.
 func (s *Server) UploadSpec(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20)) // 10 MB
+	body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20)) // 10 MB limit
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
 
-	// Detect format from body content — more reliable than Content-Type
-	// which may be altered by proxies or browser defaults.
 	format := detectFormat(body)
-
 	var result *parser.ParseResult
 	if format == "JSON" {
 		result, err = parser.FromJSON(body)
@@ -74,7 +57,6 @@ func (s *Server) UploadSpec(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, s.storeResult(result))
 }
 
-// GetSpec retrieves a previously stored spec by ID.
 func (s *Server) GetSpec(w http.ResponseWriter, _ *http.Request, id openapi_types.UUID) {
 	stored, err := s.store.Get(id)
 	if err != nil {
@@ -99,8 +81,7 @@ func (s *Server) GetSpec(w http.ResponseWriter, _ *http.Request, id openapi_type
 	})
 }
 
-// ApproveSpec marks a spec as approved for proxy use, optionally
-// replacing the auto-extracted host list with a user-edited one.
+// ApproveSpec marks a spec as approved and optionally updates its host allowlist.
 func (s *Server) ApproveSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	stored, err := s.store.Get(id)
 	if err != nil {
@@ -136,18 +117,15 @@ func (s *Server) ApproveSpec(w http.ResponseWriter, r *http.Request, id openapi_
 	})
 }
 
-// ProxyRequest forwards an HTTP request to an external API and returns
-// the response. It is gated by Origin allowlist, per-spec approval,
-// per-host allowlist, and per-host rate limiting, and validates SSRF.
+var proxyMiddleware = Chain(OriginAllowed)
+
+// ProxyRequest gates and forwards requests via the proxy executor using inline middleware.
 func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
+	proxyMiddleware(http.HandlerFunc(s.proxyRequestCore)).ServeHTTP(w, r)
+}
 
-	if !originAllowed(r) {
-		writeError(w, http.StatusForbidden, "origin not allowed")
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB incoming limit
+func (s *Server) proxyRequestCore(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 	var req ProxyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -161,17 +139,11 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	parsed, err := url.Parse(req.Url)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid URL: "+err.Error())
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		writeError(w, http.StatusBadRequest, "invalid URL: only http and https are allowed")
 		return
 	}
 
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		writeError(w, http.StatusBadRequest, "only http and https URLs are allowed")
-		return
-	}
-
-	// Per-spec approval + host allowlist.
 	stored, err := s.store.Get(req.SpecId)
 	if err != nil {
 		writeError(w, http.StatusForbidden, "unknown spec")
@@ -181,133 +153,39 @@ func (s *Server) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "spec not approved — please approve before sending requests")
 		return
 	}
-	host := parsed.Hostname()
-	if !hostInList(host, stored.AllowedHosts) {
-		writeError(w, http.StatusForbidden, "host not allowed for this spec")
-		return
-	}
 
-	// Per-host rate limit.
-	if !allowHost(host) {
-		writeError(w, http.StatusTooManyRequests, "rate limit exceeded for host")
-		return
-	}
+	res, err := s.proxy.Execute(r.Context(), proxy.Input{
+		Method:       string(req.Method),
+		URL:          req.Url,
+		Headers:      derefHeaders(req.Headers),
+		Body:         req.Body,
+		SpecID:       req.SpecId.String(),
+		Origin:       r.Header.Get("Origin"),
+		AllowedHosts: stored.AllowedHosts,
+	})
 
-	// Defense-in-depth: pre-flight DNS check (also catches numeric hosts).
-	if _, err := resolveAndValidate(r.Context(), host); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
-		return
-	}
-
-	var bodyReader io.Reader
-	if req.Body != nil {
-		bodyBytes, err := json.Marshal(req.Body)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "failed to encode request body")
-			return
+	if err != nil {
+		switch {
+		case errors.Is(err, proxy.ErrHostNotAllowed):
+			writeError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, proxy.ErrRateLimited):
+			writeError(w, http.StatusTooManyRequests, err.Error())
+		case errors.Is(err, proxy.ErrSSRFBlocked):
+			writeError(w, http.StatusForbidden, err.Error())
+		default:
+			writeError(w, http.StatusInternalServerError, "Proxy internal error: "+err.Error())
 		}
-		bodyReader = bytes.NewReader(bodyBytes)
-	}
-
-	outReq, err := http.NewRequestWithContext(r.Context(), string(req.Method), req.Url, bodyReader)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to create request: "+err.Error())
 		return
 	}
-
-	if req.Headers != nil {
-		for k, v := range *req.Headers {
-			outReq.Header.Set(k, v)
-		}
-	}
-
-	for _, h := range dangerousOutboundHeaders {
-		outReq.Header.Del(h)
-	}
-
-	if outReq.Header.Get("User-Agent") == "" {
-		outReq.Header.Set("User-Agent", "ReqViz/0.1")
-	}
-	if bodyReader != nil && outReq.Header.Get("Content-Type") == "" {
-		outReq.Header.Set("Content-Type", "application/json")
-	}
-
-	start := time.Now()
-	resp, err := proxyClient.Do(outReq)
-	durationMs := int(time.Since(start).Milliseconds())
-
-	if err != nil {
-		slog.Warn("proxy",
-			"method", req.Method, "host", host, "spec_id", req.SpecId.String(),
-			"origin", origin, "duration_ms", durationMs, "error", err.Error())
-		writeJSON(w, http.StatusOK, ProxyResponse{
-			Status:     0,
-			Headers:    map[string]string{},
-			Body:       "Network error: " + err.Error(),
-			DurationMs: &durationMs,
-		})
-		return
-	}
-	defer resp.Body.Close()
-
-	headers := sanitizeHeaders(resp.Header)
-	ct := resp.Header.Get("Content-Type")
-
-	if !contentTypeAllowed(ct) {
-		slog.Info("proxy", "method", req.Method, "host", host,
-			"status", resp.StatusCode, "duration_ms", durationMs,
-			"spec_id", req.SpecId.String(), "origin", origin,
-			"blocked_content_type", ct)
-		writeJSON(w, http.StatusOK, ProxyResponse{
-			Status:     resp.StatusCode,
-			Headers:    headers,
-			Body:       "<binary or disallowed content-type: " + ct + ">",
-			DurationMs: &durationMs,
-		})
-		return
-	}
-
-	respBody, truncated, err := readBodyWithCap(resp.Body, proxyMaxResponseBytes)
-	if err != nil {
-		writeJSON(w, http.StatusOK, ProxyResponse{
-			Status:     resp.StatusCode,
-			Headers:    headers,
-			Body:       "Error reading response body: " + err.Error(),
-			DurationMs: &durationMs,
-		})
-		return
-	}
-	if truncated {
-		writeJSON(w, http.StatusOK, ProxyResponse{
-			Status:     http.StatusBadGateway,
-			Headers:    headers,
-			Body:       fmt.Sprintf("upstream response exceeded %d byte limit", proxyMaxResponseBytes),
-			DurationMs: &durationMs,
-		})
-		return
-	}
-
-	var parsedBody any
-	if err := json.Unmarshal(respBody, &parsedBody); err != nil {
-		parsedBody = string(respBody)
-	}
-
-	slog.Info("proxy",
-		"method", req.Method, "host", host,
-		"status", resp.StatusCode, "duration_ms", durationMs,
-		"bytes", len(respBody), "spec_id", req.SpecId.String(), "origin", origin)
 
 	writeJSON(w, http.StatusOK, ProxyResponse{
-		Status:     resp.StatusCode,
-		Headers:    headers,
-		Body:       parsedBody,
-		DurationMs: &durationMs,
+		Status:     res.Status,
+		Headers:    res.Headers,
+		Body:       res.Body,
+		DurationMs: &res.DurationMs,
 	})
 }
 
-// parseAndStoreSpec validates a raw OpenAPI spec (as a map), extracts
-// metadata, stores it, and returns a SpecSummary. Used by LoadDemo where
-// the spec is already a Go map.
 func (s *Server) parseAndStoreSpec(raw map[string]any) (*SpecSummary, error) {
 	rawBytes, err := json.Marshal(raw)
 	if err != nil {
@@ -322,7 +200,6 @@ func (s *Server) parseAndStoreSpec(raw map[string]any) (*SpecSummary, error) {
 	return s.storeResult(result), nil
 }
 
-// storeResult persists a ParseResult and returns the corresponding SpecSummary.
 func (s *Server) storeResult(r *parser.ParseResult) *SpecSummary {
 	stored := &store.StoredSpec{
 		Title:         r.Title,
@@ -331,7 +208,7 @@ func (s *Server) storeResult(r *parser.ParseResult) *SpecSummary {
 		SchemaCount:   r.SchemaCount,
 		Tags:          r.Tags,
 		Raw:           r.Raw,
-		AllowedHosts:  extractServerHosts(r.Raw),
+		AllowedHosts:  proxy.ExtractServerHosts(r.Raw),
 	}
 	id := s.store.Save(stored)
 
@@ -349,8 +226,7 @@ func (s *Server) storeResult(r *parser.ParseResult) *SpecSummary {
 	}
 }
 
-// detectFormat guesses whether body is JSON or YAML by checking if the
-// trimmed content starts with '{' (JSON object).
+// detectFormat guesses JSON/YAML by checking if content starts with '{'.
 func detectFormat(body []byte) string {
 	for _, b := range body {
 		switch b {
@@ -363,6 +239,13 @@ func detectFormat(body []byte) string {
 		}
 	}
 	return "YAML"
+}
+
+func derefHeaders(h *map[string]string) map[string]string {
+	if h == nil {
+		return nil
+	}
+	return *h
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
