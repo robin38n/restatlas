@@ -52,6 +52,13 @@ export class ApiService {
 		});
 	}
 
+	approveSpec(id: string, allowedHosts?: string[]) {
+		return this.client.POST("/specs/{id}/approve", {
+			params: { path: { id } },
+			body: allowedHosts ? { allowedHosts } : {},
+		});
+	}
+
 	loadDemo(slug: string) {
 		return this.client.POST("/demos/{slug}/load", {
 			params: { path: { slug } },

@@ -13,6 +13,7 @@ export interface ProxyRequest {
 	url: string;
 	headers?: Record<string, string>;
 	body?: unknown;
+	specId?: string;
 }
 
 export interface ProxyResponse {
@@ -48,7 +49,8 @@ export class TryItOutService {
 				req as unknown as Parameters<typeof this.api.proxyRequest>[0],
 			);
 			if (error) {
-				this.error.set("Proxy request failed");
+				const msg = (error as { error?: string })?.error;
+				this.error.set(msg ?? "Proxy request failed");
 				return;
 			}
 			const response = data as unknown as ProxyResponse;

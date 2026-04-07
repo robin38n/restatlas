@@ -8,6 +8,7 @@ import {
 import { Router } from "@angular/router";
 import { RequestHistoryComponent } from "../../shared/components/request-history/request-history.component";
 import { ResponseViewerComponent } from "../../shared/components/response-viewer/response-viewer.component";
+import { SpecGraphService } from "../spec-viewer/services/spec-graph.service";
 import {
 	type HistoryEntry,
 	type ProxyRequest,
@@ -25,6 +26,7 @@ const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 export class ApiClientComponent {
 	private readonly router = inject(Router);
 	protected readonly tryItOut = inject(TryItOutService);
+	private readonly specGraph = inject(SpecGraphService);
 
 	readonly methods = METHODS;
 	readonly method = signal<string>("GET");
@@ -117,6 +119,7 @@ export class ApiClientComponent {
 			url: reqUrl,
 			headers: Object.keys(headers).length > 0 ? headers : undefined,
 			body: hasBody && bodyPayload != null ? bodyPayload : undefined,
+			specId: this.specGraph.specId() ?? undefined,
 		});
 	}
 

@@ -28,6 +28,9 @@ export class SpecGraphService {
 	readonly selectedTags = signal<Set<string>>(new Set());
 	readonly selectedMethods = signal<Set<string>>(new Set());
 
+	readonly approved = computed(() => this.summary()?.approved ?? false);
+	readonly allowedHosts = computed(() => this.summary()?.allowedHosts ?? []);
+
 	readonly endpointNodes = computed(
 		() =>
 			this.graph()?.nodes.filter(
@@ -153,6 +156,21 @@ export class SpecGraphService {
 		this.searchQuery.set("");
 		this.selectedTags.set(new Set());
 		this.selectedMethods.set(new Set());
+	}
+
+	async approve(hosts?: string[]): Promise<void> {
+		const id = this.specId();
+		if (!id) return;
+		try {
+			const { data, error } = await this.api.approveSpec(id, hosts);
+			if (error || !data) {
+				this.error.set("Failed to approve spec");
+				return;
+			}
+			this.summary.set(data);
+		} catch {
+			this.error.set("Network error during approval");
+		}
 	}
 
 	async loadSpec(id: string): Promise<void> {

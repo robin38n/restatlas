@@ -53,6 +53,12 @@ func (e ProxyRequestMethod) Valid() bool {
 	}
 }
 
+// ApproveSpecRequest defines model for ApproveSpecRequest.
+type ApproveSpecRequest struct {
+	// AllowedHosts Optional user-edited host list. Defaults to spec's servers.
+	AllowedHosts *[]string `json:"allowedHosts,omitempty"`
+}
+
 // DemoInfo defines model for DemoInfo.
 type DemoInfo struct {
 	Description string `json:"description"`
@@ -75,7 +81,10 @@ type ProxyRequest struct {
 	Body    interface{}        `json:"body,omitempty"`
 	Headers *map[string]string `json:"headers,omitempty"`
 	Method  ProxyRequestMethod `json:"method"`
-	Url     string             `json:"url"`
+
+	// SpecId ID of the approved spec this request belongs to
+	SpecId openapi_types.UUID `json:"specId"`
+	Url    string             `json:"url"`
 }
 
 // ProxyRequestMethod defines model for ProxyRequest.Method.
@@ -92,6 +101,11 @@ type ProxyResponse struct {
 
 // SpecSummary defines model for SpecSummary.
 type SpecSummary struct {
+	// AllowedHosts Hostnames the proxy may call for this spec
+	AllowedHosts []string `json:"allowedHosts"`
+
+	// Approved Whether the user has approved this spec for proxy use
+	Approved      bool               `json:"approved"`
 	CreatedAt     *time.Time         `json:"createdAt,omitempty"`
 	EndpointCount int                `json:"endpointCount"`
 	Id            openapi_types.UUID `json:"id"`
@@ -124,6 +138,9 @@ type ProxyRequestJSONRequestBody = ProxyRequest
 // UploadSpecJSONRequestBody defines body for UploadSpec for application/json ContentType.
 type UploadSpecJSONRequestBody UploadSpecJSONBody
 
+// ApproveSpecJSONRequestBody defines body for ApproveSpec for application/json ContentType.
+type ApproveSpecJSONRequestBody = ApproveSpecRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List available demo API specs
@@ -147,6 +164,9 @@ type ServerInterface interface {
 	// Get a stored specification
 	// (GET /specs/{id})
 	GetSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Approve a spec for proxy use
+	// (POST /specs/{id}/approve)
+	ApproveSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -191,6 +211,12 @@ func (_ Unimplemented) UploadSpec(w http.ResponseWriter, r *http.Request) {
 // Get a stored specification
 // (GET /specs/{id})
 func (_ Unimplemented) GetSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Approve a spec for proxy use
+// (POST /specs/{id}/approve)
+func (_ Unimplemented) ApproveSpec(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -334,6 +360,31 @@ func (siw *ServerInterfaceWrapper) GetSpec(w http.ResponseWriter, r *http.Reques
 	handler.ServeHTTP(w, r)
 }
 
+// ApproveSpec operation middleware
+func (siw *ServerInterfaceWrapper) ApproveSpec(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveSpec(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -468,6 +519,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/specs/{id}", wrapper.GetSpec)
 	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/specs/{id}/approve", wrapper.ApproveSpec)
+	})
 
 	return r
 }
@@ -475,26 +529,30 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7yXX2/bNhDAvwrB7WED1Mhd+uQ3N3aTDGlsxGmAocjDRTxbbCSSIakkXiBgH2KfcJ9k",
-	"IClbliU7bh30pVWs0/Hud3/5QhOZKylQWEP7L1SjUVIY9H9cSvtJFoK550QKi8K6R1Aq4wlYLkX8zUjh",
-	"fjNJijm4J6WlQm15UIFaS+0e7EIh7VNjNRdzWpbR8hd59w0TS0v3E0OTaK6cZtqnV2hkoRMkQloy84aU",
-	"Eb2BjDN/+Gipe2/bftU4o336S1w7HYe3Jt7U22FQLUJmwDNk3o9KgdM/xFyei5lsc2goatGIqMmKeecL",
-	"y22G3QA1PhRcI6P9r+H7pXTT7tsW6ohOQBtkU4VJ21Tu4z2TOgdL+7QoOKNR2zANTx44Y9wdA9lkTYvV",
-	"BW7SG2s+5wIyMlYoBpNzYhQmBAz5czq+pB1GmiLPQS9eC5zzYlqJbmLxpjtLa22dOLR8XlzhQ4HGtoHc",
-	"SbZoxZBW4sS9Jb+BWBCn9nenLkVgqM12PF1x3rQpR5tKHwoURe6cOR1d04hOxlP/3xf/7+D65IxGdDi6",
-	"GF2PaETPRoMhjeh4cn0+vpyuOVufVOisGWDN2/Hd4FgZEz7eQTA0j/0RBvkuhqzQvtI+r+PiwuIc9Zsx",
-	"NhZs0XnAZnkFwfrYLgbridgikGgEi2xgG+wZWHxneY5dFYaCKcmFPZFFaG5tCnvWaiiVHXoszEPtW8x3",
-	"sgOtYbGrL0X0EbXpbnNdxbnsWMuvNt1uGt+FvWMgbPZeCzxr+teUmHHMWKczORoDc9xrgrUhfd/049Xk",
-	"aBbJR0juUTDiOuZManKFDzf8b/LfP/+SG26KtX46elaZ1KhXVH2TcsKDyfka4j7tHb0/6jkDpUIBitM+",
-	"PT7qHR3TiCqwqWcSM8ylf5qjzxoHzGM+Z7RPL7ixQy8RNZeGP3q975rJq5Ds6vGrwdqC3J7SA/eCyBlx",
-	"DpAcLTCwEEb1sjq9+QQegWdwl2EQXc4k42WD//GLm6zlVgyn6Cn4SergacjR+r709YVyZ44DSiMqIPcZ",
-	"EOZ0XQZhUtY4NjPl9kC8u+bz6xsYPAU0jVFdRvRD78O2kK2sjVfrYxP9KVpiUyQanpqrgMtu8Oe1AxBn",
-	"EnyFKmm6slECc3H4WTF4/2ZrZ3N7aUVguKKv/MpGQDBirHR2HxgHvwPW+ir0/rCIaLSFFlzMCbeGmLX1",
-	"Kk4RMpturYgz//okxeT+0NbQbNL1sF4uRPK+Y8HZ52YxRf3IEyTckOCNZ++cU26P2Z5njUUxpBAa+7Ha",
-	"bt4kIRpHlM2Z6RK1PBDqHmdXW1wHOCfAkRFdy6yn1Mn4ako8Ql/MrrIrRFVPDe11K94vypV51Ux/FO7+",
-	"N5KrzQ609TJSRo1Dn98tIM+ax76u+q/B54uOTXuPCP+0duNek8JHoeo1oe2EXtN7vde0b9Hr+RHiS0A0",
-	"2PBZ5ctajsQvnO2cuntP3HAF3NrrX9mdD56/O8utvoV3xOJTkWUhd564TZf9v95nDp/CUE2SVhScJOrH",
-	"JdWmXRcygYwM8REzqXL0O7q/U9LUWtWP48wJpNLY/nGv14vdflnelv8HAAD//zwUCxtqEgAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

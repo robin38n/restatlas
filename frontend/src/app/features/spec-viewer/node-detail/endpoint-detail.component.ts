@@ -31,6 +31,20 @@ import { TryItOutComponent } from "../try-it-out/try-it-out.component";
 export class EndpointDetailComponent {
 	protected readonly svc = inject(SpecGraphService);
 	readonly activeTab = signal<"details" | "try-it">("details");
+	readonly showApprovalDialog = signal(false);
+
+	openApprovalDialog(): void {
+		this.showApprovalDialog.set(true);
+	}
+
+	cancelApproval(): void {
+		this.showApprovalDialog.set(false);
+	}
+
+	async confirmApproval(): Promise<void> {
+		this.showApprovalDialog.set(false);
+		await this.svc.approve();
+	}
 
 	asEndpoint(node: GraphNode | null): EndpointNode | null {
 		return node?.type === "endpoint" ? (node as EndpointNode) : null;

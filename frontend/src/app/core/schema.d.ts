@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/specs/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a spec for proxy use */
+        post: operations["approveSpec"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/proxy": {
         parameters: {
             query?: never;
@@ -136,6 +153,10 @@ export interface components {
             tags?: string[];
             /** Format: date-time */
             createdAt?: string;
+            /** @description Whether the user has approved this spec for proxy use */
+            approved: boolean;
+            /** @description Hostnames the proxy may call for this spec */
+            allowedHosts: string[];
         };
         ParsedSpec: {
             /** Format: uuid */
@@ -147,6 +168,11 @@ export interface components {
             summary: components["schemas"]["SpecSummary"];
         };
         ProxyRequest: {
+            /**
+             * Format: uuid
+             * @description ID of the approved spec this request belongs to
+             */
+            specId: string;
             /** @enum {string} */
             method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
             /** Format: uri */
@@ -156,6 +182,10 @@ export interface components {
             };
             /** @description Request body (any type) */
             body?: unknown;
+        };
+        ApproveSpecRequest: {
+            /** @description Optional user-edited host list. Defaults to spec's servers. */
+            allowedHosts?: string[];
         };
         ProxyResponse: {
             status: number;
@@ -254,6 +284,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ParsedSpec"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    approveSpec: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveSpecRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated spec summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpecSummary"];
                 };
             };
             404: components["responses"]["NotFound"];

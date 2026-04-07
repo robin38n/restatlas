@@ -15,8 +15,10 @@ type StoredSpec struct {
 	EndpointCount int
 	SchemaCount   int
 	Tags          []string
-	Raw           map[string]interface{}
+	Raw           map[string]any
 	CreatedAt     time.Time
+	Approved      bool
+	AllowedHosts  []string
 }
 
 type SpecStore struct {
@@ -48,5 +50,20 @@ func (s *SpecStore) Get(id uuid.UUID) (*StoredSpec, error) {
 	if !ok {
 		return nil, fmt.Errorf("spec not found: %s", id)
 	}
+	return spec, nil
+}
+
+// Approve marks a stored spec as user-approved for proxy use and replaces
+// its allowed-host list. Returns an error if the spec does not exist.
+func (s *SpecStore) Approve(id uuid.UUID, hosts []string) (*StoredSpec, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	spec, ok := s.specs[id]
+	if !ok {
+		return nil, fmt.Errorf("spec not found: %s", id)
+	}
+	spec.Approved = true
+	spec.AllowedHosts = hosts
 	return spec, nil
 }

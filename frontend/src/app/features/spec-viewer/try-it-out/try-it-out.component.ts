@@ -99,6 +99,7 @@ export class TryItOutComponent {
 			method: ep.method as ProxyRequest["method"],
 			url: this.url(),
 			body: this.body(),
+			specId: this.svc.specId() ?? undefined,
 		});
 	}
 }

@@ -56,6 +56,33 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /specs/{id}/approve:
+    post:
+      operationId: approveSpec
+      summary: Approve a spec for proxy use
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveSpecRequest'
+      responses:
+        '200':
+          description: Updated spec summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecSummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /proxy:
     post:
       operationId: proxyRequest
@@ -148,7 +175,7 @@ components:
   schemas:
     SpecSummary:
       type: object
-      required: [id, title, version, endpointCount, schemaCount]
+      required: [id, title, version, endpointCount, schemaCount, approved, allowedHosts]
       properties:
         id:
           type: string
@@ -168,6 +195,14 @@ components:
         createdAt:
           type: string
           format: date-time
+        approved:
+          type: boolean
+          description: Whether the user has approved this spec for proxy use
+        allowedHosts:
+          type: array
+          items:
+            type: string
+          description: Hostnames the proxy may call for this spec
 
     ParsedSpec:
       type: object
@@ -185,8 +220,12 @@ components:
 
     ProxyRequest:
       type: object
-      required: [method, url]
+      required: [method, url, specId]
       properties:
+        specId:
+          type: string
+          format: uuid
+          description: ID of the approved spec this request belongs to
         method:
           type: string
           enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
@@ -199,6 +238,15 @@ components:
             type: string
         body:
           description: Request body (any type)
+
+    ApproveSpecRequest:
+      type: object
+      properties:
+        allowedHosts:
+          type: array
+          items:
+            type: string
+          description: Optional user-edited host list. Defaults to spec's servers.
 
     ProxyResponse:
       type: object

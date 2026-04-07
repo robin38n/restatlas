@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -63,6 +64,9 @@ func isPrivateIP(ip net.IP) bool {
 func resolveAndValidate(ctx context.Context, host string) ([]net.IP, error) {
 	if host == "localhost" {
 		return nil, fmt.Errorf("requests to localhost are not allowed")
+	}
+	if isNumericOrEncodedHost(host) {
+		return nil, fmt.Errorf("numeric/encoded hostnames are not allowed")
 	}
 
 	// If it's already an IP literal, validate directly.
@@ -137,8 +141,11 @@ func newSafeProxyClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
-			DialContext:         safeDialContext,
-			TLSHandshakeTimeout: 10 * time.Second,
+			DialContext:           safeDialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
+			ResponseHeaderTimeout: 15 * time.Second,
+			MaxResponseHeaderBytes: 64 << 10,
 		},
 		CheckRedirect: safeCheckRedirect,
 	}
