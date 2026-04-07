@@ -44,6 +44,7 @@ export class SchemaFormComponent {
 	readonly allSchemas = input<Record<string, unknown>>({});
 
 	readonly arrayValues = signal<Record<string, unknown[]>>({});
+	readonly enabledFields = signal<Record<string, boolean>>({});
 
 	readonly fields = computed((): FormField[] => {
 		const s = this.schema();
@@ -77,11 +78,34 @@ export class SchemaFormComponent {
 		let val: string | number | boolean =
 			target.type === "checkbox" ? target.checked : target.value;
 		if (isNumber && val !== "") val = Number(val);
+
+		const field = this.fields().find((f) => f.name === name);
+		if (field && !field.required) {
+			this.enabledFields.update((e) => ({ ...e, [name]: true }));
+		}
+
 		this.value.update((v) => ({ ...v, [name]: val }));
 	}
 
 	updateNested(name: string, val: Record<string, unknown>): void {
+		const field = this.fields().find((f) => f.name === name);
+		if (field && !field.required) {
+			this.enabledFields.update((e) => ({ ...e, [name]: true }));
+		}
 		this.value.update((v) => ({ ...v, [name]: val }));
+	}
+
+	toggleField(name: string, event: Event): void {
+		const checked = (event.target as HTMLInputElement).checked;
+		this.enabledFields.update((e) => ({ ...e, [name]: checked }));
+
+		if (!checked) {
+			this.value.update((v) => {
+				const next = { ...v };
+				delete next[name];
+				return next;
+			});
+		}
 	}
 
 	addArrayItem(name: string): void {

@@ -18,22 +18,87 @@
 		<div class="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-[0.8rem] mb-2 border border-red-100 dark:border-red-900/30">{{ tryItOut.error() }}</div>
 	}
 
-	@if (parameters().length > 0) {
+	@if (pathParameters().length > 0) {
 		<section>
 			<h4 class="m-0 mb-1.5 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Path Parameters</h4>
 			<div class="space-y-2">
-				@for (p of parameters(); track p.name) {
-					@if (p.in === 'path') {
-						<div class="flex items-center gap-2">
-							<label class="text-xs font-semibold text-app-text min-w-[80px] shrink-0">{{ p.name }} <span class="text-red-600 dark:text-red-400">*</span></label>
-							<input
-								type="text"
-								[value]="pathParams()[p.name] || ''"
-								(input)="updateParam(p.name, $event)"
-								class="flex-1 py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500"
-							/>
-						</div>
-					}
+				@for (p of pathParameters(); track p.name) {
+					<div class="flex items-center gap-2">
+						<div class="size-4 shrink-0"></div> <!-- spacing for checkbox alignment -->
+						<label class="text-xs font-semibold text-app-text min-w-[100px] shrink-0">
+							{{ p.name }}
+							@if (p.required !== false) { <span class="text-red-600 dark:text-red-400">*</span> }
+						</label>
+						<input
+							type="text"
+							[value]="pathParams()[p.name] || ''"
+							(input)="updatePathParam(p.name, $event)"
+							class="flex-1 py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500"
+							[placeholder]="p.schema?.example || p.example || ''"
+						/>
+					</div>
+				}
+			</div>
+		</section>
+	}
+
+	@if (queryParameters().length > 0) {
+		<section class="mt-4">
+			<h4 class="m-0 mb-1.5 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Query Parameters</h4>
+			<div class="space-y-2">
+				@for (p of queryParameters(); track p.name) {
+					<div class="flex items-center gap-2" [class.opacity-60]="!p.required && !enabledParameters()[p.name]">
+						<input
+							type="checkbox"
+							[checked]="p.required || enabledParameters()[p.name]"
+							[disabled]="p.required"
+							(change)="toggleParameter(p.name, $event)"
+							class="size-4 rounded border-app-border bg-app-bg text-blue-600 focus:ring-blue-500"
+						/>
+						<label class="text-xs font-semibold text-app-text min-w-[100px] shrink-0">
+							{{ p.name }}
+							@if (p.required) { <span class="text-red-600 dark:text-red-400">*</span> }
+						</label>
+						<input
+							type="text"
+							[value]="queryParams()[p.name] || ''"
+							(input)="updateQueryParam(p.name, $event)"
+							class="flex-1 py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500 disabled:opacity-50"
+							[placeholder]="p.schema?.example || p.example || ''"
+							[disabled]="!p.required && !enabledParameters()[p.name]"
+						/>
+					</div>
+				}
+			</div>
+		</section>
+	}
+
+	@if (headerParameters().length > 0) {
+		<section class="mt-4">
+			<h4 class="m-0 mb-1.5 text-xs text-app-text-muted uppercase tracking-wide font-semibold">Header Parameters</h4>
+			<div class="space-y-2">
+				@for (p of headerParameters(); track p.name) {
+					<div class="flex items-center gap-2" [class.opacity-60]="!p.required && !enabledParameters()[p.name]">
+						<input
+							type="checkbox"
+							[checked]="p.required || enabledParameters()[p.name]"
+							[disabled]="p.required"
+							(change)="toggleParameter(p.name, $event)"
+							class="size-4 rounded border-app-border bg-app-bg text-blue-600 focus:ring-blue-500"
+						/>
+						<label class="text-xs font-semibold text-app-text min-w-[100px] shrink-0">
+							{{ p.name }}
+							@if (p.required) { <span class="text-red-600 dark:text-red-400">*</span> }
+						</label>
+						<input
+							type="text"
+							[value]="headerParams()[p.name] || ''"
+							(input)="updateHeaderParam(p.name, $event)"
+							class="flex-1 py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500 disabled:opacity-50"
+							[placeholder]="p.schema?.example || p.example || ''"
+							[disabled]="!p.required && !enabledParameters()[p.name]"
+						/>
+					</div>
 				}
 			</div>
 		</section>

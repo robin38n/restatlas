@@ -1,36 +1,48 @@
 <div class="flex flex-col gap-2">
 	@for (field of fields(); track field.name) {
-		<div class="flex flex-col gap-1">
-			<label class="block text-xs font-semibold text-app-text mb-0.5">
-				{{ field.name }}
-				@if (field.required) { <span class="text-red-600 dark:text-red-400">*</span> }
-				<span class="text-app-text-muted font-normal ml-1">{{ field.type }}</span>
+		<div class="flex flex-col gap-1" [class.opacity-60]="!field.required && !enabledFields()[field.name]">
+			<label class="flex items-center gap-2 text-xs font-semibold text-app-text mb-0.5">
+				<input
+					type="checkbox"
+					[checked]="field.required || enabledFields()[field.name]"
+					[disabled]="field.required"
+					(change)="toggleField(field.name, $event)"
+					class="size-3.5 rounded border-app-border bg-app-bg text-blue-600 focus:ring-blue-500"
+				/>
+				<span>
+					{{ field.name }}
+					@if (field.required) { <span class="text-red-600 dark:text-red-400">*</span> }
+					<span class="text-app-text-muted font-normal ml-1">{{ field.type }}</span>
+				</span>
 			</label>
 
 			@if (field.type === 'string') {
 				<input
 					type="text"
-					class="w-full py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500"
+					class="w-full py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500 disabled:opacity-50"
 					(input)="updateValue(field.name, $event)"
+					[disabled]="!field.required && !enabledFields()[field.name]"
 				/>
 			} @else if (field.type === 'number' || field.type === 'integer') {
 				<input
 					type="number"
-					class="w-full py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500"
+					class="w-full py-1 px-2 border border-app-border rounded text-xs bg-app-bg text-app-text focus:outline-none focus:border-blue-500 disabled:opacity-50"
 					(input)="updateValue(field.name, $event, true)"
+					[disabled]="!field.required && !enabledFields()[field.name]"
 				/>
 			} @else if (field.type === 'boolean') {
 				<input
 					type="checkbox"
-					class="rounded border-app-border bg-app-bg text-blue-600 focus:ring-blue-500"
+					class="rounded border-app-border bg-app-bg text-blue-600 focus:ring-blue-500 disabled:opacity-50"
 					(change)="updateValue(field.name, $event)"
+					[disabled]="!field.required && !enabledFields()[field.name]"
 				/>
 			} @else if (field.type === 'object' && field.properties) {
-				<div class="ml-3 pl-3 border-l-2 border-app-border mt-1 py-1">
+				<div class="ml-3 pl-3 border-l-2 border-app-border mt-1 py-1" [class.pointer-events-none]="!field.required && !enabledFields()[field.name]">
 					<app-schema-form [schema]="field.originalSchema!" (valueChange)="updateNested(field.name, $event)" />
 				</div>
 			} @else if (field.type === 'array') {
-				<div class="ml-3 pl-3 border-l-2 border-app-border mt-1 py-1">
+				<div class="ml-3 pl-3 border-l-2 border-app-border mt-1 py-1" [class.pointer-events-none]="!field.required && !enabledFields()[field.name]">
 					@for (item of arrayValues()[field.name] || []; track $index) {
 						<div class="flex gap-2 items-start mb-2 group">
 							<span class="text-[0.7rem] text-app-text-muted font-mono pt-1.5 shrink-0">[{{ $index }}]</span>
@@ -42,7 +54,8 @@
 								<button 
 									type="button"
 									(click)="removeArrayItem(field.name, $index)"
-									class="absolute -top-2 -right-2 bg-app-bg border border-app-border rounded-full size-5 flex items-center justify-center text-xs text-app-text-muted hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+									class="absolute -top-2 -right-2 bg-app-bg border border-app-border rounded-full size-5 flex items-center justify-center text-xs text-app-text-muted hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+									[disabled]="!field.required && !enabledFields()[field.name]"
 								>&times;</button>
 							</div>
 						</div>
@@ -50,7 +63,8 @@
 					<button
 						type="button"
 						(click)="addArrayItem(field.name)"
-						class="bg-transparent border border-dashed border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-1 px-2 rounded text-xs mb-1.5 w-full hover:bg-app-surface-hover transition-colors"
+						class="bg-transparent border border-dashed border-app-border text-blue-600 dark:text-blue-400 cursor-pointer py-1 px-2 rounded text-xs mb-1.5 w-full hover:bg-app-surface-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						[disabled]="!field.required && !enabledFields()[field.name]"
 					>+ Add item</button>
 				</div>
 			}
