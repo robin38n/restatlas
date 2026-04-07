@@ -47,31 +47,35 @@
     --graph-schema-fill: var(--bg-surface);
     --graph-schema-stroke: #94a3b8;
     --graph-endpoint-text: #ffffff;
+    --graph-bg: #fafafa;
+    --graph-border: #e5e7eb;
   }
 
   .dark {
-    /* Dark Mode (Grayish - Brighter) */
-    --bg-app: #18181b; /* Zinc 900 */
-    --bg-surface: #27272a; /* Zinc 800 */
-    --bg-surface-hover: #323238; /* Slightly lighter than surface, but more subtle than zinc-700 */
-    --border-base: #2d2d33; /* Subtle border for dark mode */
-    
-    --text-base: #f4f4f5; /* Zinc 100 */
-    --text-muted: #a1a1aa; /* Zinc 400 */
-    --text-inverted: #18181b;
-    
-    --bg-primary: #f4f4f5; /* Zinc 100 */
-    --bg-primary-hover: #ffffff;
+    /* Dark Mode — VS Code Dark Modern (2026) */
+    --bg-app: #1f1f1f;            /* editor background */
+    --bg-surface: #181818;        /* side/activity panel */
+    --bg-surface-hover: #2a2a2a;
+    --border-base: #2b2b2b;       /* subtle panel border */
+
+    --text-base: #cccccc;
+    --text-muted: #9d9d9d;
+    --text-inverted: #1f1f1f;
+
+    --bg-primary: #0078d4;        /* VS Code accent blue */
+    --bg-primary-hover: #1f8ad6;
 
     /* Graph overrides for dark */
-    --graph-edge-req: #60a5fa;
+    --graph-edge-req: #4fc1ff;
     --graph-edge-res-2xx: #4ade80;
     --graph-edge-res-4xx: #f87171;
     --graph-edge-res-5xx: #f87171;
-    --graph-edge-param: #818cf8;
-    --graph-edge-prop: #52525b;
-    --graph-schema-fill: #27272a;
-    --graph-schema-stroke: #52525b;
+    --graph-edge-param: #c586c0;
+    --graph-edge-prop: #6a6a6a;
+    --graph-schema-fill: #252526;
+    --graph-schema-stroke: #6a6a6a;
+    --graph-bg: #181818;
+    --graph-border: #2b2b2b;
   }
 
   body {

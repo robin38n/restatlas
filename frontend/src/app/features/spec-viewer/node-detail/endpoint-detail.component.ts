@@ -18,19 +18,19 @@ import type {
 	SchemaNode,
 } from "../../../models/graph.model";
 import { MethodBadgeComponent } from "../../../shared/components/method-badge/method-badge.component";
+import { RequestHistoryComponent } from "../../../shared/components/request-history/request-history.component";
 import { SpecGraphService } from "../services/spec-graph.service";
 import { TryItOutComponent } from "../try-it-out/try-it-out.component";
 
 @Component({
 	selector: "app-endpoint-detail",
-	imports: [TryItOutComponent, MethodBadgeComponent],
+	imports: [TryItOutComponent, MethodBadgeComponent, RequestHistoryComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	templateUrl: "./endpoint-detail.component.html",
 })
 export class EndpointDetailComponent {
 	protected readonly svc = inject(SpecGraphService);
 	readonly activeTab = signal<"details" | "try-it">("details");
-	readonly copied = signal(false);
 
 	asEndpoint(node: GraphNode | null): EndpointNode | null {
 		return node?.type === "endpoint" ? (node as EndpointNode) : null;
@@ -110,14 +110,6 @@ export class EndpointDetailComponent {
 			};
 		});
 	});
-
-	copyLink(): void {
-		const url = new URL(window.location.href);
-		url.searchParams.set("node", this.svc.selectedNodeId() || "");
-		navigator.clipboard.writeText(url.toString());
-		this.copied.set(true);
-		setTimeout(() => this.copied.set(false), 2000);
-	}
 
 	navigateTo(nodeId: string): void {
 		const g = this.svc.graph();

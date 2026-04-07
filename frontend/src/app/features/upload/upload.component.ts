@@ -30,13 +30,13 @@ export class UploadComponent {
 	readonly loading = signal(false);
 	readonly error = signal<string | null>(null);
 	readonly summary = signal<SpecSummary | null>(null);
-	demos: DemoInfo[] = [];
+	readonly demos = signal<DemoInfo[]>([]);
 	readonly selectedDemoSlug = signal("");
 
 	constructor() {
 		this.api.listDemos().then(({ data }) => {
 			if (data && data.length > 0) {
-				this.demos = data;
+				this.demos.set(data);
 			}
 		});
 	}

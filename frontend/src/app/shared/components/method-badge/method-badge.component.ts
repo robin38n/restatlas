@@ -34,9 +34,11 @@ export class MethodBadgeComponent {
 		const bg = METHOD_BG[this.method()] ?? "bg-zinc-500";
 		const size = this.size();
 
-		let sizeClasses = "text-[0.65rem] px-1 py-0.5 min-w-[32px]";
-		if (size === "xs") sizeClasses = "text-[0.55rem] px-0.5 py-0 min-w-[24px]";
-		if (size === "lg") sizeClasses = "text-[0.8rem] px-2 py-1 min-w-[48px]";
+		let sizeClasses = "text-[0.65rem] px-1 py-1 min-w-[36px] h-[18px]";
+		if (size === "xs")
+			sizeClasses = "text-[0.6rem] px-1 py-0.5 min-w-[30px] h-[16px]";
+		if (size === "lg")
+			sizeClasses = "text-[0.8rem] px-2 py-1 min-w-[48px] h-[24px]";
 
 		return `${bg} ${sizeClasses}`;
 	});

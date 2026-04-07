@@ -16,17 +16,17 @@
 			</div>
 		}
 
-		<div class="flex border border-app-border rounded-md overflow-hidden mb-4 bg-app-bg">
+		<div class="inline-flex w-full p-0.5 mb-4 rounded-lg bg-app-surface border border-app-border">
 			<button
 				type="button"
-				class="flex-1 py-1 text-xs font-medium border-none cursor-pointer transition-colors"
-				[class]="activeTab() === 'details' ? 'bg-app-primary text-app-text-inv' : 'bg-transparent text-app-text-muted hover:bg-app-surface-hover'"
+				class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md border-none cursor-pointer transition-all"
+				[class]="activeTab() === 'details' ? 'bg-app-bg text-app-text shadow-sm' : 'bg-transparent text-app-text-muted hover:text-app-text'"
 				(click)="activeTab.set('details')"
 			>Details</button>
 			<button
 				type="button"
-				class="flex-1 py-1 text-xs font-medium border-none border-l border-app-border cursor-pointer transition-colors"
-				[class]="activeTab() === 'try-it' ? 'bg-app-primary text-app-text-inv' : 'bg-transparent text-app-text-muted hover:bg-app-surface-hover'"
+				class="flex-1 px-3 py-1.5 text-xs font-medium rounded-md border-none cursor-pointer transition-all"
+				[class]="activeTab() === 'try-it' ? 'bg-app-bg text-app-text shadow-sm' : 'bg-transparent text-app-text-muted hover:text-app-text'"
 				(click)="activeTab.set('try-it')"
 			>Try It Out</button>
 		</div>
@@ -109,15 +109,9 @@
 		} @else {
 			<div class="animate-in fade-in duration-200">
 				<app-try-it-out [endpoint]="ep" />
+				<app-request-history [collapsible]="true" [filterMethod]="ep.method" [filterPath]="ep.path" />
 			</div>
 		}
 
-		<button
-			type="button"
-			(click)="copyLink()"
-			class="block mt-3 py-1.5 px-3 bg-transparent border border-app-border rounded text-app-text-muted text-xs cursor-pointer transition-all hover:bg-app-surface-hover hover:text-app-text"
-		>
-			{{ copied() ? 'Copied!' : 'Copy direct link' }}
-		</button>
 	}
 }

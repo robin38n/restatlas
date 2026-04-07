@@ -9,7 +9,7 @@
 		<button
 			type="button"
 			(click)="sendRequest()"
-			class="py-1.5 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-[0.8rem] font-semibold shrink-0 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+			class="py-1.5 px-3 bg-app-primary text-app-text-inv border-none rounded cursor-pointer text-[0.8rem] font-semibold shrink-0 hover:bg-app-primary-hover disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-colors"
 			[disabled]="tryItOut.loading()"
 		>{{ tryItOut.loading() ? '...' : 'Send' }}</button>
 	</div>

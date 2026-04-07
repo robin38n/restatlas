@@ -81,7 +81,8 @@ export class TryItOutComponent {
 	}
 
 	hasSchema(obj: unknown): boolean {
-		return !!this.getSchema(obj);
+		const s = this.getSchema(obj);
+		return !!s && !!asRecord(s.properties);
 	}
 
 	getSchema(obj: unknown): Record<string, unknown> {

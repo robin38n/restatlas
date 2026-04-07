@@ -1,6 +1,6 @@
 <button
 	type="button"
-	class="flex items-center justify-center w-8 h-8 rounded-md border border-gray-200 bg-white dark:bg-slate-900/85 backdrop-blur-sm cursor-pointer text-slate-500 dark:text-slate-400 transition-colors duration-150 hover:bg-white dark:bg-slate-900 hover:text-slate-800 dark:text-slate-200"
+	class="flex items-center justify-center size-8 rounded-md border border-app-border bg-app-bg/90 backdrop-blur-sm cursor-pointer text-app-text-muted transition-colors hover:bg-app-surface-hover hover:text-app-text"
 	(click)="toggle($event)"
 	title="Edge legend"
 >
@@ -13,10 +13,10 @@
 </button>
 @if (open()) {
 	<div
-		class="absolute top-9 right-0 bg-white dark:bg-slate-900/90 backdrop-blur border border-gray-200 rounded-lg px-3.5 py-3 min-w-[180px] shadow-md"
+		class="absolute top-9 right-0 bg-app-bg/95 backdrop-blur border border-app-border rounded-lg px-3.5 py-3 min-w-[180px] shadow-md"
 		(click)="$event.stopPropagation()"
 	>
-		<div class="text-[11px] font-semibold text-slate-800 dark:text-slate-200 mb-2 uppercase tracking-wide">
+		<div class="text-[11px] font-semibold text-app-text mb-2 uppercase tracking-wide">
 			Edge Types
 		</div>
 		@for (entry of entries; track entry.label) {
@@ -34,7 +34,7 @@
 						[attr.fill]="entry.color"
 					/>
 				</svg>
-				<span class="text-xs text-slate-600 dark:text-slate-400">{{ entry.label }}</span>
+				<span class="text-xs text-app-text-muted">{{ entry.label }}</span>
 			</div>
 		}
 	</div>

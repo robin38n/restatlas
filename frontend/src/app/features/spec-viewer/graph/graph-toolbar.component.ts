@@ -36,12 +36,14 @@ export class GraphToolbarComponent {
 	}
 
 	methodClasses(method: string): string {
-		if (this.svc.selectedMethods().has(method)) {
+		const selected = this.svc.selectedMethods();
+		const included = selected.size === 0 || selected.has(method);
+		if (included) {
 			return (
 				METHOD_ACTIVE[method] ??
 				"bg-app-text-muted text-app-text-inv border-app-text-muted"
 			);
 		}
-		return "border-app-border bg-app-bg text-app-text-muted hover:border-app-text-muted/50 transition-colors";
+		return "border-app-border bg-app-bg text-app-text-muted opacity-60 hover:opacity-100 transition-all";
 	}
 }
