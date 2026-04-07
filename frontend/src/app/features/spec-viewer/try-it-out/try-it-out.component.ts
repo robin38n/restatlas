@@ -90,7 +90,11 @@ export class TryItOutComponent {
 
 		for (const p of this.queryParameters()) {
 			const value = qp[p.name];
-			if ((p.required || enabled[p.name]) && value !== undefined && value !== "") {
+			if (
+				(p.required || enabled[p.name]) &&
+				value !== undefined &&
+				value !== ""
+			) {
 				searchParams.append(p.name, value);
 				hasQuery = true;
 			}
@@ -148,7 +152,6 @@ export class TryItOutComponent {
 	async sendRequest(): Promise<void> {
 		const ep = this.endpoint();
 
-		const qp = this.queryParams();
 		const hp = this.headerParams();
 		const enabled = this.enabledParameters();
 		const headers: Record<string, string> = {};
