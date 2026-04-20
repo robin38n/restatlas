@@ -1,3 +1,4 @@
+<app-reactive-background />
 <nav class="flex items-center px-4 py-2 border-b border-app-border bg-app-bg">
 	<a routerLink="/" class="flex items-center gap-2 no-underline text-app-text">
 		<img [src]="theme.isDark() ? 'assets/icons/reqviz-white.svg' : 'assets/icons/reqviz.svg'" alt="" class="size-6" />
@@ -9,6 +10,18 @@
 		<a routerLink="/api-client" routerLinkActive="!text-app-text !font-semibold"
 			class="text-sm text-app-text-muted no-underline px-2 py-1 rounded transition-colors hover:text-app-text hover:bg-app-surface-hover">API Client</a>
 		
+		<div class="w-px h-5 bg-app-border"></div>
+
+		<button type="button" (click)="theme.toggleBackground()" 
+			class="p-2 rounded-lg bg-transparent hover:bg-app-surface-hover text-app-text-muted transition-colors cursor-pointer"
+			[class]="theme.backgroundEnabled() ? 'text-app-text' : 'text-app-text-muted opacity-50'"
+			[title]="theme.backgroundEnabled() ? 'Disable background animation' : 'Enable background animation'">
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<title>Background animation</title>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+			</svg>
+		</button>
+
 		<button type="button" (click)="theme.toggleTheme()" 
 			class="p-2 rounded-lg bg-transparent hover:bg-app-surface-hover text-app-text-muted transition-colors cursor-pointer"
 			[title]="theme.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
@@ -27,3 +40,4 @@
 	</div>
 </nav>
 <router-outlet />
+

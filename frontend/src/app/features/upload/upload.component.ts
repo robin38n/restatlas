@@ -16,11 +16,10 @@ type SpecSummary = SpecSummaryRaw & { endpoints?: number; schemas?: number };
 type DemoInfo = components["schemas"]["DemoInfo"];
 
 import { DecimalPipe } from "@angular/common";
-import { ReactiveBackgroundComponent } from "../../shared/components/reactive-background/reactive-background.component";
 
 @Component({
 	selector: "app-upload",
-	imports: [RouterLink, ReactiveBackgroundComponent, DecimalPipe],
+	imports: [RouterLink, DecimalPipe],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	templateUrl: "./upload.component.html",
 })

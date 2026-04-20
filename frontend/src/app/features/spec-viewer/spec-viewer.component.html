@@ -4,35 +4,41 @@
 	}
 
 	@if (svc.error(); as err) {
-		<div class="p-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-center border border-red-100 dark:border-red-900/30">
-			<p class="mb-4">{{ err }}</p>
-			<a routerLink="/" class="inline-block py-2 px-4 bg-app-primary text-app-text-inv rounded no-underline text-sm hover:opacity-90 transition-opacity">Return to start</a>
+		<div class="p-6 bg-app-surface/80 backdrop-blur-md border border-red-500/30 rounded-xl text-center shadow-lg shadow-red-500/5 animate-in fade-in slide-in-from-top-2 duration-300">
+			<div class="flex items-center justify-center size-12 rounded-full bg-red-500/10 mx-auto mb-4">
+				<svg aria-hidden="true" class="size-6 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+				</svg>
+			</div>
+			<p class="text-xs font-semibold uppercase tracking-wider text-red-500 dark:text-red-400 mb-2">Error</p>
+			<p class="mb-4 text-app-text">{{ err }}</p>
+			<a routerLink="/" class="inline-block py-2 px-4 bg-app-primary text-app-text-inv rounded-md no-underline text-sm font-medium hover:bg-app-primary-hover transition-colors shadow-sm">Return to start</a>
 		</div>
 	}
 
 	@if (svc.summary(); as s) {
 		<header>
-			<h1 class="mt-2 mb-0 text-2xl font-bold">{{ s.title }} <span class="text-app-text-muted text-sm font-normal">v{{ s.version }}</span></h1>
+			<h1 class="mt-2 mb-0 text-2xl font-bold"><span class="bg-clip-text text-transparent bg-gradient-to-r from-app-text to-app-text-muted">{{ s.title }}</span> <span class="text-app-text-muted text-sm font-normal">v{{ s.version }}</span></h1>
 			<div class="flex gap-4 mt-2 mb-4">
-				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.endpointNodes().length }} endpoints</span>
-				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.schemaNodes().length }} schemas</span>
-				<span class="py-1 px-2 bg-app-surface border border-app-border rounded text-sm text-app-text-muted">{{ svc.edgeCount() }} relationships</span>
+				<span class="py-1 px-2 bg-app-surface/80 backdrop-blur-md border border-app-border rounded text-sm text-app-text-muted shadow-sm">{{ svc.endpointNodes().length }} endpoints</span>
+				<span class="py-1 px-2 bg-app-surface/80 backdrop-blur-md border border-app-border rounded text-sm text-app-text-muted shadow-sm">{{ svc.schemaNodes().length }} schemas</span>
+				<span class="py-1 px-2 bg-app-surface/80 backdrop-blur-md border border-app-border rounded text-sm text-app-text-muted shadow-sm">{{ svc.edgeCount() }} relationships</span>
 			</div>
 		</header>
 
 		<div class="flex items-start justify-between gap-4">
 			<app-graph-toolbar />
-			<div class="flex border border-app-border rounded-md overflow-hidden shrink-0">
+			<div class="flex bg-app-surface/80 backdrop-blur-md border border-app-border shadow-sm rounded-md overflow-hidden shrink-0">
 				<button
 					type="button"
 					class="py-1.5 px-3 text-[0.8rem] border-none cursor-pointer transition-colors"
-					[class]="layout() === 'structured' ? 'bg-app-primary text-app-text-inv' : 'bg-app-bg text-app-text-muted hover:bg-app-surface-hover'"
+					[class]="layout() === 'structured' ? 'bg-blue-600 text-white font-medium shadow-inner' : 'bg-transparent text-app-text-muted hover:bg-app-surface-hover'"
 					(click)="layout.set('structured')"
 				>Structured</button>
 				<button
 					type="button"
 					class="py-1.5 px-3 text-[0.8rem] border-none border-l border-app-border cursor-pointer transition-colors"
-					[class]="layout() === 'interactive' ? 'bg-app-primary text-app-text-inv' : 'bg-app-bg text-app-text-muted hover:bg-app-surface-hover'"
+					[class]="layout() === 'interactive' ? 'bg-blue-600 text-white font-medium shadow-inner' : 'bg-transparent text-app-text-muted hover:bg-app-surface-hover'"
 					(click)="layout.set('interactive')"
 				>Interactive</button>
 			</div>
@@ -45,9 +51,9 @@
 				<app-graph-canvas-force [graph]="g" (nodeClick)="onNodeClick($event)" />
 			}
 
-			<div class="grid grid-cols-2 border border-app-border rounded-lg mt-6 overflow-hidden bg-app-bg">
+			<div class="grid grid-cols-2 bg-app-surface/80 backdrop-blur-md border border-app-border rounded-xl shadow-2xl mt-6 overflow-hidden">
 				<!-- List pane -->
-				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-app-border">
+				<div class="p-4 overflow-y-auto max-h-[600px] border-r border-app-border bg-app-bg/50">
 					<app-list-toolbar 
 						[activeSort]="listSort()"
 						[sortOptions]="[
@@ -62,8 +68,8 @@
 						<h2 class="text-xs font-semibold text-app-text-muted uppercase tracking-wide mb-2">Endpoints</h2>
 						@for (ep of localEndpoints(); track ep.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface-hover min-w-0"
-								[class]="svc.selectedNodeId() === ep.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface min-w-0"
+								[class]="svc.selectedNodeId() === ep.id ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'border border-transparent'"
 								(click)="onNodeClick(ep)"
 							>
 								<app-method-badge [method]="ep.method" />
@@ -78,8 +84,8 @@
 						<h2 class="text-xs font-semibold text-app-text-muted uppercase tracking-wide mb-2">Schemas</h2>
 						@for (sc of localSchemas(); track sc.id) {
 							<div
-								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface-hover min-w-0"
-								[class]="svc.selectedNodeId() === sc.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''"
+								class="flex items-center gap-2 py-1.5 px-2 rounded mb-0.5 text-sm cursor-pointer transition-colors hover:bg-app-surface min-w-0"
+								[class]="svc.selectedNodeId() === sc.id ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : 'border border-transparent'"
 								(click)="onNodeClick(sc)"
 							>
 								<strong class="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{{ sc.name }}</strong>
@@ -92,7 +98,7 @@
 				</div>
 
 				<!-- Detail pane -->
-				<div class="p-4 overflow-y-auto max-h-[600px] bg-app-surface/30">
+				<div class="p-4 overflow-y-auto max-h-[600px] bg-transparent">
 					@if (svc.selectedNode()) {
 						<app-node-detail />
 					} @else {

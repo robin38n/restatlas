@@ -50,7 +50,7 @@ func (s *Server) UploadSpec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, "Invalid JSON or YAML format")
 		return
 	}
 

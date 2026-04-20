@@ -3,6 +3,7 @@ import {
 	Component,
 	type ElementRef,
 	HostListener,
+	effect,
 	inject,
 	NgZone,
 	type OnDestroy,
@@ -23,7 +24,7 @@ interface Node {
 	selector: "app-reactive-background",
 	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	template: `<canvas #canvas class="fixed inset-0 w-full h-full pointer-events-none"></canvas>`,
+	template: `<canvas #canvas class="fixed inset-0 w-full h-full pointer-events-none" style="transition: opacity 0.4s ease"></canvas>`,
 })
 export class ReactiveBackgroundComponent implements OnInit, OnDestroy {
 	private readonly ngZone = inject(NgZone);
@@ -35,11 +36,26 @@ export class ReactiveBackgroundComponent implements OnInit, OnDestroy {
 	private ctx!: CanvasRenderingContext2D;
 	private nodes: Node[] = [];
 	private animationFrameId = 0;
+	private initialized = false;
 
 	private mouseX = -1000;
 	private mouseY = -1000;
 	private width = 0;
 	private height = 0;
+
+	constructor() {
+		effect(() => {
+			const enabled = this.theme.backgroundEnabled();
+			if (!this.initialized) return;
+			this.ngZone.runOutsideAngular(() => {
+				if (enabled) {
+					this.startAnimation();
+				} else {
+					this.stopAnimation();
+				}
+			});
+		});
+	}
 
 	ngOnInit() {
 		this.ngZone.runOutsideAngular(() => {
@@ -79,7 +95,30 @@ export class ReactiveBackgroundComponent implements OnInit, OnDestroy {
 
 		this.resizeCanvas();
 		this.initNodes();
-		this.animate();
+		this.initialized = true;
+
+		if (this.theme.backgroundEnabled()) {
+			this.startAnimation();
+		} else {
+			canvas.style.opacity = "0";
+		}
+	}
+
+	private startAnimation() {
+		const canvas = this.canvasRef().nativeElement;
+		canvas.style.opacity = "1";
+		if (!this.animationFrameId) {
+			this.animate();
+		}
+	}
+
+	private stopAnimation() {
+		if (this.animationFrameId) {
+			cancelAnimationFrame(this.animationFrameId);
+			this.animationFrameId = 0;
+		}
+		const canvas = this.canvasRef().nativeElement;
+		canvas.style.opacity = "0";
 	}
 
 	private resizeCanvas() {
@@ -181,3 +220,4 @@ export class ReactiveBackgroundComponent implements OnInit, OnDestroy {
 		this.animationFrameId = requestAnimationFrame(() => this.animate());
 	}
 }
+
