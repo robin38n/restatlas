@@ -9,12 +9,12 @@
   --color-app-surface: var(--bg-surface);
   --color-app-surface-hover: var(--bg-surface-hover);
   --color-app-border: var(--border-base);
-  
+
   /* Text Colors */
   --color-app-text: var(--text-base);
   --color-app-text-muted: var(--text-muted);
   --color-app-text-inv: var(--text-inverted);
-  
+
   /* Primary Action */
   --color-app-primary: var(--bg-primary);
   --color-app-primary-hover: var(--bg-primary-hover);
@@ -27,11 +27,11 @@
     --bg-surface: #f9fafb;
     --bg-surface-hover: #f3f4f6;
     --border-base: #e5e7eb;
-    
+
     --text-base: #111827;
     --text-muted: #6b7280;
     --text-inverted: #ffffff;
-    
+
     --bg-primary: #18181b;
     --bg-primary-hover: #27272a;
 
@@ -52,33 +52,56 @@
   }
 
   .dark {
-    /* Dark Mode — VS Code Dark Modern (2026) */
-    --bg-app: #1f1f1f;            /* editor background */
-    --bg-surface: #181818;        /* side/activity panel */
-    --bg-surface-hover: #2a2a2a;
-    --border-base: #2b2b2b;       /* subtle panel border */
+    /* Dark Mode */
+    --bg-app: #0e0e11;
+    /* deep dark gray/black */
+    --bg-surface: #16161a;
+    /* slightly lighter gray */
+    --bg-surface-hover: #1f1f25;
+    --border-base: #2a2a32;
 
-    --text-base: #cccccc;
-    --text-muted: #9d9d9d;
-    --text-inverted: #1f1f1f;
+    --text-base: #ededef;
+    --text-muted: #8b8b93;
+    --text-inverted: #0e0e11;
 
-    --bg-primary: #0078d4;        /* VS Code accent blue */
-    --bg-primary-hover: #1f8ad6;
+    --bg-primary: #3f3f46;
+    /* Muted primary gray */
+    --bg-primary-hover: #52525b;
 
     /* Graph overrides for dark */
-    --graph-edge-req: #4fc1ff;
+    --graph-edge-req: #71717a;
     --graph-edge-res-2xx: #4ade80;
     --graph-edge-res-4xx: #f87171;
     --graph-edge-res-5xx: #f87171;
-    --graph-edge-param: #c586c0;
-    --graph-edge-prop: #6a6a6a;
-    --graph-schema-fill: #252526;
-    --graph-schema-stroke: #6a6a6a;
-    --graph-bg: #181818;
-    --graph-border: #2b2b2b;
+    --graph-edge-param: #a1a1aa;
+    --graph-edge-prop: #52525b;
+    --graph-schema-fill: #16161a;
+    --graph-schema-stroke: #3f3f46;
+    --graph-bg: #0e0e11;
+    --graph-border: #2a2a32;
   }
 
+  html,
   body {
     @apply bg-app-bg text-app-text transition-colors duration-200;
+    min-height: 100vh;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-app-border rounded-full border-2 border-app-bg transition-colors;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-app-text-muted;
   }
 }

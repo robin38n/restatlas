@@ -23,11 +23,9 @@ export class ThemeService {
 
 	private getInitialTheme(): boolean {
 		const saved = localStorage.getItem("theme");
-		let isDark = false;
+		let isDark = true; // Default to dark mode
 		if (saved) {
 			isDark = saved === "dark";
-		} else {
-			isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 		}
 		// Apply initial theme
 		setTimeout(() => this.applyTheme(isDark), 0);
